@@ -26,7 +26,7 @@ export const protocolToUpdatePayload = (item: Protocol): UpdateProtocolPayload =
   formCode: item.formCode,
   appendixNumber: item.appendixNumber,
   executor: item.executor || '',
-  executorId: item.executorId == null ? undefined : String(item.executorId),
+  executorId: item.executorId == null || item.executorId === '' ? undefined : Number(item.executorId),
   approver: item.approver || '',
   laboratory: item.laboratory,
   organization: item.organization,

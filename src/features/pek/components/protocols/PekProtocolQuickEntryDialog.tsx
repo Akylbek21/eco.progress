@@ -3,8 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import protocolService from '../../../../services/protocolService';
+import { getAvailableMeasurementDevices } from '../../../../services/measurementDeviceService';
 import { normalizeApiError } from '../../../../services/apiHelpers';
-import type { Protocol, ProtocolResult, ProtocolSamplingPoint } from '../../../../types/protocols';
+import type { MeasurementDevice, Protocol, ProtocolResult, ProtocolSamplingPoint } from '../../../../types/protocols';
 import { mapProtocolResultFormToRequest } from '../../../protocols/api/protocolMappers';
 import type { ProtocolCreationRequirement } from '../../../protocols/api/protocolCreationContracts';
 import { protocolCreationContextKey } from '../../../protocols/hooks/useProtocolCreationContext';
@@ -32,6 +33,21 @@ const resultNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 const numericId = (value: unknown) => Number.isSafeInteger(Number(value)) ? Number(value) : undefined;
+const normalizedDeviceText = (value: unknown) => scalarText(value).toLocaleLowerCase('ru-RU').replace(/[^a-zа-яё0-9]+/gi, ' ').trim();
+const deviceForIndicator = (indicator: PekIndicator, devices: MeasurementDevice[], laboratoryId?: string | number | null) => {
+  const requested = normalizedDeviceText(indicator.measurementDeviceType);
+  if (!requested) return undefined;
+  const matches = devices.filter((device) => {
+    if (laboratoryId && device.laboratoryId && !sameId(device.laboratoryId, laboratoryId)) return false;
+    const candidates = [device.deviceType, device.name, device.model]
+      .map(normalizedDeviceText)
+      .filter(Boolean);
+    const description = candidates.join(' ');
+    return candidates.some((candidate) => candidate === requested || candidate.includes(requested) || requested.includes(candidate))
+      || description.includes(requested);
+  });
+  return matches.length === 1 ? matches[0] : undefined;
+};
 
 const normativeLabel = (indicator: PekIndicator) => {
   if (indicator.minValue != null || indicator.maxValue != null) {
@@ -69,10 +85,11 @@ const resultRequest = (
   indicator: PekIndicator,
   value: number,
   samplingPointId: string | number | null,
+  measurementDeviceId?: string | number | null,
   existing?: ProtocolResult,
 ) => mapProtocolResultFormToRequest({
   normativeId: indicator.normativeId ?? null,
-  measurementDeviceId: existing?.measurementDeviceId ?? null,
+  measurementDeviceId: existing?.measurementDeviceId ?? measurementDeviceId ?? null,
   samplingPointId,
   values: {
     ...(existing?.values || {}),
@@ -174,6 +191,11 @@ export default function PekProtocolQuickEntryDialog({ open, report, program, onC
     enabled: open && Boolean(measurementDate),
     retry: false,
   });
+  const devicesQuery = useQuery({
+    queryKey: ['measurement-devices', 'pek-quick-entry', measurementDate],
+    queryFn: () => getAvailableMeasurementDevices({ measurementDate }),
+    enabled: open && Boolean(measurementDate),
+  });
 
   const requirements = useMemo(() => contextQuery.data?.requirements.filter((requirement) =>
     sameId(requirement.pekProgramId, report.programId),
@@ -216,14 +238,25 @@ export default function PekProtocolQuickEntryDialog({ open, report, program, onC
             pekControlItemId: requirement.pekControlItemId,
             monitoringPointId: requirement.monitoringPointId,
             protocolTemplateId: requirement.protocolTemplateId,
+            date: measurementDate,
           });
         protocol = await prepareProtocol(protocol, requirement, findControlItem(program, requirement), measurementDate);
         const pointId = localSamplingPointId(protocol, requirement);
+        const controlItem = findControlItem(program, requirement);
+        const indicatorDevices = new Map<string, MeasurementDevice>();
+        for (const indicator of indicatorsForRequirement(requirement, program?.indicators || [])) {
+          const device = deviceForIndicator(indicator, devicesQuery.data || [], controlItem?.laboratoryId);
+          if (device) indicatorDevices.set(indicator.rowKey, device);
+        }
+        for (const device of Array.from(new Map(Array.from(indicatorDevices.values()).map((item) => [String(item.id), item])).values())) {
+          const attached = protocol.measurementDevices.some((item) => sameId(item.deviceId || item.id, device.id));
+          if (!attached) protocol = await protocolService.addProtocolMeasurementDevice(protocol.id, device, protocol.version);
+        }
         const added = [];
         const updated = [];
         for (const indicator of indicatorsForRequirement(requirement, program?.indicators || [])) {
           const existing = findResult(protocol, indicator);
-          const request = resultRequest(requirement, indicator, resultNumber(values[indicator.rowKey] || '')!, pointId, existing);
+          const request = resultRequest(requirement, indicator, resultNumber(values[indicator.rowKey] || '')!, pointId, indicatorDevices.get(indicator.rowKey)?.id, existing);
           if (existing) updated.push({ ...request, id: existing.id });
           else added.push({ ...request, clientRowId: globalThis.crypto?.randomUUID?.() || `pek-result-${Date.now()}-${indicator.rowKey}` });
         }

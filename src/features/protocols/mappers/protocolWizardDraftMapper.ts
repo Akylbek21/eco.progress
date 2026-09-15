@@ -73,6 +73,7 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
       factorType: nullableText(form.results.find((row) => row.factorType)?.factorType || ''),
     },
   },
+  sourceNumber: nullableText(form.sourceNumber),
   pekContext: hasPekContext ? {
     pekProgramId: nullableNumber(form.pekProgramId),
     pekReportId: nullableNumber(form.pekReportId),
@@ -83,7 +84,6 @@ export const mapWizardToCreateDraft = (form: ProtocolWizardForm): CreateProtocol
     emissionSourceId: nullableNumber(form.emissionSourceId),
     waterOutletId: nullableNumber(form.waterOutletId),
   } : null,
-  samplingPoints: mapWizardSamplingPoints(form).map((point) => ({ ...point, id: point.id ?? null })),
   printVisibility: form.printVisibility,
   };
 };

@@ -127,8 +127,8 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
   );
 
   return (
-    <div className={`min-h-screen bg-slate-100 text-slate-900 2xl:grid ${collapsed ? '2xl:grid-cols-[84px_minmax(0,1fr)]' : '2xl:grid-cols-[270px_minmax(0,1fr)]'}`}>
-      <aside className={`hidden bg-eco-900 text-white 2xl:sticky 2xl:top-0 2xl:block 2xl:h-screen 2xl:overflow-y-auto ${collapsed ? 'p-3' : 'p-5'}`}>
+    <div className={`min-h-screen bg-slate-100 text-slate-900 xl:grid ${collapsed ? 'xl:grid-cols-[76px_minmax(0,1fr)]' : 'xl:grid-cols-[248px_minmax(0,1fr)]'}`}>
+      <aside className={`hidden bg-eco-900 text-white xl:sticky xl:top-0 xl:block xl:h-screen xl:overflow-y-auto ${collapsed ? 'p-3' : 'p-4'}`}>
         <div className={`flex items-start ${collapsed ? 'flex-col items-center gap-3' : 'justify-between gap-3'}`}>
           <Link to={homePath} title={collapsed ? 'ecoprogress.kz CRM' : undefined} className="flex min-w-0 items-center text-xl font-bold leading-tight">
           {collapsed ? <Leaf size={26} aria-label="ecoprogress.kz CRM" /> : <span>
@@ -146,7 +146,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
       <div className="min-w-0">
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
           <div className={`mx-auto flex w-full max-w-[1920px] items-center justify-between gap-3 px-4 sm:px-8 ${isPekWorkspace ? 'py-2.5' : 'py-4'}`}>
-            <button className="rounded-2xl border border-slate-200 bg-white p-3 2xl:hidden" onClick={() => setOpen(true)} aria-label="Меню">
+            <button className="rounded-2xl border border-slate-200 bg-white p-3 xl:hidden" onClick={() => setOpen(true)} aria-label="Меню">
               <Menu size={20} />
             </button>
             <div className="min-w-0 flex-1">
@@ -163,7 +163,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
         {open && (
-          <div className="fixed inset-0 z-50 bg-eco-900/40 2xl:hidden" onClick={() => setOpen(false)}>
+          <div className="fixed inset-0 z-50 bg-eco-900/40 xl:hidden" onClick={() => setOpen(false)}>
             <aside className="h-full w-80 max-w-[86vw] overflow-y-auto bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
               <div className="mb-6 flex items-center justify-between">
                 <div>
@@ -178,7 +178,7 @@ const StaffLayout = ({ children }: { children: ReactNode }) => {
             </aside>
           </div>
         )}
-        <main className={`staff-crm mx-auto w-full max-w-[1920px] px-4 sm:px-8 ${isPekWorkspace ? 'py-3 sm:py-4' : 'py-6 sm:py-8'}`}>{children}</main>
+        <main className={`staff-crm mx-auto w-full max-w-[1920px] px-4 sm:px-6 2xl:px-8 ${isPekWorkspace ? 'py-3 sm:py-4' : 'py-5 sm:py-6 2xl:py-8'}`}>{children}</main>
       </div>
     </div>
   );

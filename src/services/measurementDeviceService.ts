@@ -54,6 +54,7 @@ export async function getAvailableMeasurementDevices(params?: DirectoryQuery): P
         ...source,
         id: text(source.id ?? source.measurementDeviceId),
         name: text(source.name),
+        deviceType: text(source.deviceType ?? source.type),
         model: text(source.model),
         serialNumber: text(source.serialNumber),
         verificationCertificateNumber: text(source.verificationCertificateNumber ?? source.verificationNumber),

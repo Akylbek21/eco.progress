@@ -1164,6 +1164,8 @@ export async function createProtocolFromPek(payload: CreateProtocolFromPekReques
     pekControlItemId: payload.pekControlItemId,
     monitoringPointId: payload.monitoringPointId,
     protocolTemplateId: payload.protocolTemplateId,
+    programIndicatorId: payload.programIndicatorId,
+    date: payload.date,
   };
   const required = [request.companyId, request.objectId, request.pekProgramId, request.pekMonitoringId, request.pekControlItemId, request.protocolTemplateId];
   if (required.some((value) => value === '' || value === null || value === undefined)) {
@@ -1367,13 +1369,41 @@ export async function previewProtocol(protocolId: string): Promise<Blob> {
 }
 
 export async function generateDocx(protocolId: string, version: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-docx`, { version: requireProtocolVersion(version) });
-  return protocolFromActionResponse(protocolId, response);
+  return generateProtocolDocument(protocolId, version, 'docx');
 }
 
 export async function generatePdf(protocolId: string, version: number): Promise<Protocol> {
-  const response = await api.post<ApiResponse<unknown> | unknown>(`/protocols/${protocolId}/generate-pdf`, { version: requireProtocolVersion(version) });
-  return protocolFromActionResponse(protocolId, response);
+  return generateProtocolDocument(protocolId, version, 'pdf');
+}
+
+const DOCUMENT_GENERATION_TIMEOUT_MS = 120_000;
+
+async function generateProtocolDocument(
+  protocolId: string,
+  version: number,
+  kind: 'docx' | 'pdf',
+): Promise<Protocol> {
+  try {
+    const response = await api.post<ApiResponse<unknown> | unknown>(
+      `/protocols/${protocolId}/generate-${kind}`,
+      { version: requireProtocolVersion(version) },
+      { timeout: DOCUMENT_GENERATION_TIMEOUT_MS },
+    );
+    return protocolFromActionResponse(protocolId, response);
+  } catch (error) {
+    const code = asString(asRecord(error).code).toUpperCase();
+    if (code !== 'ECONNABORTED' && code !== 'ETIMEDOUT') throw error;
+
+    // Conversion can finish on the server just as the HTTP request times out.
+    // Re-read the protocol before exposing a retry that could regenerate the file.
+    try {
+      const current = await getProtocol(protocolId);
+      if (kind === 'pdf' ? current.hasPdf : current.hasDocx) return current;
+    } catch {
+      // Keep the original timeout if the reconciliation request also fails.
+    }
+    throw error;
+  }
 }
 
 export type DownloadedProtocolFile = {
@@ -1671,12 +1701,24 @@ export async function getWeatherConditions(params: {
 }
 
 export async function calculateProtocol(protocolId: string, version: number): Promise<Protocol> {
-  await api.post<ApiResponse<unknown> | unknown>(
-    `/protocols/${protocolId}/calculate`,
-    { version: requireProtocolVersion(version) },
-  );
+  const summary = await calculateProtocolSummary(protocolId, version);
   // The calculation endpoint returns a calculation summary in production,
   // not a full protocol DTO. Re-read the updated protocol instead of treating
   // a successful summary response as a broken mutation contract.
-  return getProtocol(protocolId);
+  const protocol = await getProtocol(protocolId);
+  if (protocol.status === 'DRAFT') {
+    const blockers = [
+      summary.waitingInputs ? `ожидают данных: ${summary.waitingInputs}` : '',
+      summary.normativeNotFound ? `без норматива: ${summary.normativeNotFound}` : '',
+      summary.needsRepeat ? `нужен повтор: ${summary.needsRepeat}` : '',
+      summary.errors ? `ошибок: ${summary.errors}` : '',
+    ].filter(Boolean);
+    if (blockers.length) {
+      throw new Error(`Расчёт не завершён (${blockers.join(', ')}). Проверьте результат, норматив и прибор в каждой строке.`);
+    }
+    // In the current backend calculation updates result rows, while the canonical
+    // DRAFT -> CALCULATED transition belongs to the normative-check operation.
+    return checkNormatives(protocolId, protocol.version);
+  }
+  return protocol;
 }

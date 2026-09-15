@@ -89,7 +89,7 @@ export const mapProtocolFormToPatchRequest = (
   protocolDate: payload.protocolDate,
   objectId: idOrNull(payload.objectId),
   executor: optionalText(payload.executor),
-  executorId: idOrNull(payload.executorId),
+  executorId: payload.executorId == null || payload.executorId === '' ? null : Number(payload.executorId),
   measurementDate: optionalText(payload.measurementDate),
   measurementTime: optionalText(payload.measurementTime),
   measurementPlace: ambient ? null : optionalText(payload.measurementPlace),

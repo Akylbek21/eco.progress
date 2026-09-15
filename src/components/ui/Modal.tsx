@@ -107,16 +107,16 @@ const Modal = ({
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
         className={clsx(
-          'flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl shadow-eco-900/15',
+          'app-modal flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20',
           'animate-[modal-in_160ms_ease-out]',
           sizeClass[size],
         )}
         onMouseDown={(event) => event.stopPropagation()}
       >
         {(title || description) && (
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
+          <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-5 py-4 sm:px-6 sm:py-5">
             <div className="min-w-0">
-              {title && <h2 id={titleId} className="text-lg font-bold text-eco-900 sm:text-xl">{title}</h2>}
+              {title && <h2 id={titleId} className="text-lg font-black tracking-tight text-slate-900 sm:text-xl">{title}</h2>}
               {description && <p id={descriptionId} className="mt-1 text-sm leading-6 text-slate-600">{description}</p>}
             </div>
             <button
@@ -139,7 +139,7 @@ const Modal = ({
           {children}
         </div>
         {footer && (
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-6 [&>button]:min-h-11 [&>button]:min-w-28 [&>button]:rounded-xl">
             {footer}
           </div>
         )}

@@ -205,7 +205,7 @@ export type ProtocolLaboratorySnapshot = {
   laboratoryHeadId?: string;
   laboratoryHeadName?: string;
   laboratoryHead: string;
-  executorId?: string;
+  executorId?: string | number;
   executorName?: string;
   executor: string;
   logoUrl?: string;
@@ -588,7 +588,7 @@ export type UpdateProtocolPayload = {
   formCode?: string;
   appendixNumber?: string;
   executor: string;
-  executorId?: string;
+  executorId?: string | number;
   approver: string;
   laboratory?: ProtocolLaboratorySnapshot;
   organization: ProtocolOrganizationData;
@@ -922,6 +922,7 @@ export type MeasurementDeviceStatus = 'VALID' | 'ACTIVE' | 'EXPIRING' | 'EXPIRED
 export type MeasurementDevice = {
   id: string;
   name: string;
+  deviceType?: string;
   model: string;
   serialNumber: string;
   verificationCertificateNumber: string;

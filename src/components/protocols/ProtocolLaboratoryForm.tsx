@@ -73,19 +73,20 @@ const ProtocolLaboratoryForm = ({ value, employees, readOnly, loading = false, c
         <label className="rounded-xl text-xs font-bold uppercase text-slate-400">Исполнитель
           <select
             value={selectedExecutorId}
-            disabled={readOnly}
+            disabled={readOnly || loading || employees.length === 0}
             onChange={(event) => {
               const employee = employees.find((item) => String(item.id) === event.target.value);
               if (employee) onExecutorChange(employee);
             }}
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case text-slate-800 disabled:bg-slate-100"
           >
-            {!value.executorId && <option value="">{value.executor || 'Выберите исполнителя'}</option>}
+            {!value.executorId && <option value="">{loading ? 'Загрузка исполнителей…' : employees.length === 0 ? 'Нет доступных исполнителей' : value.executor || 'Выберите исполнителя'}</option>}
             {employees.filter((item) => item.active).map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName} · {employee.position || 'сотрудник'}</option>)}
           </select>
         </label>
       </div>
 
+      {!loading && employees.length === 0 && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"><span className="font-bold">В этой лаборатории нет активных исполнителей. Добавьте сотрудника и разрешите ему выполнять измерения.</span>{canOpenSettings && <Link to="/staff/settings/laboratories" className="font-bold text-eco-700 underline">Открыть настройки лаборатории</Link>}</div>}
       {!value.laboratoryHead && <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">В snapshot не выбран заведующий лабораторией.</div>}
       {certificate.status === 'EXPIRED' && <div className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-800">Подписание заблокировано до обновления действующего аттестата и данных протокола.</div>}
       <button type="button" onClick={() => setDetails((current) => !current)} className="mt-4 text-sm font-bold text-eco-700">{details ? 'Скрыть подробности' : 'Подробнее'}</button>

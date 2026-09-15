@@ -140,7 +140,7 @@ export interface CreateProtocolDraftRequest {
   testingEndDate: string | null;
   environment: ProtocolEnvironmentRequest | null;
   pekContext?: ProtocolPekContextRequest | null;
-  samplingPoints: ProtocolSamplingPointRequest[];
+  sourceNumber: string | null;
 }
 
 export type ProtocolSamplingPointRequest = {

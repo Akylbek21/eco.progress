@@ -1,7 +1,7 @@
 import axios, { type AxiosProgressEvent } from 'axios';
 import { pekApiClient as api } from './pekApiClient';
 import { filenameFromDisposition, mapPekPage, unwrapPekData } from './pekMappers';
-import { pekMutationOptions } from './pekMutation';
+import { pekDocumentMutationOptions, pekMutationOptions } from './pekMutation';
 import type {
   PageResponse,
   PekBlobResult,
@@ -357,7 +357,7 @@ export const pekApi = {
   generateReportDocument: async (id: number, kind: PekReportDocumentKind, format: PekReportDocumentFormat, version: number) => {
     if (format === 'xlsx') throw new Error('Backend ПЭК не поддерживает формирование XLSX.');
     const target = kind === 'OFFICIAL' ? `generate-official-${format}` : `generate-internal-${format}`;
-    return mapDocumentVersion((await api.post(`${reportDocumentPath(id)}/${target}`, {}, pekMutationOptions(version))).data, kind);
+    return mapDocumentVersion((await api.post(`${reportDocumentPath(id)}/${target}`, {}, pekDocumentMutationOptions(version))).data, kind);
   },
   getReportDocumentVersions: async (id: number, kind: PekReportDocumentKind, signal?: AbortSignal) =>
     (await get<unknown[]>(`${reportDocumentPath(id)}/versions`, { documentType: backendDocumentType(kind) }, signal))
@@ -399,7 +399,7 @@ export const pekApi = {
     }
   },
   generateReportPackage: async (id: number, version: number): Promise<void> => {
-    await api.post(`/pek/reports/${id}/package/generate`, {}, pekMutationOptions(version));
+    await api.post(`/pek/reports/${id}/package/generate`, {}, pekDocumentMutationOptions(version));
   },
   downloadReportPackage: async (id: number): Promise<PekBlobResult> => {
     const response = await api.get<Blob>(`/pek/reports/${id}/package/download`, { responseType: 'blob' });

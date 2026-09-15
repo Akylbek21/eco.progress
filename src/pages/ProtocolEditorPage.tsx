@@ -165,7 +165,7 @@ const DeviceStatus = ({ status }: { status: MeasurementDevice['status'] }) => (
   </span>
 );
 
-type ProtocolStepKey = 'general' | 'organization' | 'environment' | 'results' | 'instruments' | 'review';
+type ProtocolStepKey = 'general' | 'organization' | 'laboratory' | 'environment' | 'results' | 'instruments' | 'review';
 type MissingField = { label: string; stepKey: ProtocolStepKey };
 
 const userProtocolError = (error: unknown) => {
@@ -237,8 +237,8 @@ const getMissingFields = (protocol: Protocol): MissingField[] => {
   if (!hasText(protocol.protocolDate)) items.push({ label: 'дата протокола', stepKey: 'general' });
   if (!hasText(protocol.measurementDate || protocol.testing?.samplingDate)) items.push({ label: 'дата замера', stepKey: 'general' });
   if (!hasText(protocol.measurementTime)) items.push({ label: 'время замера', stepKey: 'general' });
-  if (!hasLaboratory(protocol)) items.push({ label: 'данные лаборатории', stepKey: 'general' });
-  if (!hasText(protocol.executorId)) items.push({ label: 'исполнитель лаборатории', stepKey: 'general' });
+  if (!hasLaboratory(protocol)) items.push({ label: 'данные лаборатории', stepKey: 'laboratory' });
+  if (!hasText(protocol.executorId)) items.push({ label: 'исполнитель лаборатории', stepKey: 'laboratory' });
   if (!hasText(protocol.organization?.organizationName)) items.push({ label: 'организация', stepKey: 'organization' });
   if (!hasText(protocol.organization?.organizationAddress)) items.push({ label: 'адрес организации', stepKey: 'organization' });
   if (!hasText(protocol.organization?.objectName || protocol.companySnapshot?.objectName)) items.push({ label: 'данные объекта', stepKey: 'organization' });
@@ -441,7 +441,7 @@ const ReviewChecklist = ({
     { label: 'указаны условия среды', ok: hasEnvironment(protocol), step: 'environment' as ProtocolStepKey },
     { label: 'добавлены результаты', ok: protocol.results.length > 0, step: 'results' as ProtocolStepKey },
     { label: 'выбран прибор', ok: protocol.measurementDevices.length > 0, step: 'instruments' as ProtocolStepKey },
-    { label: 'заполнены данные лаборатории', ok: hasLaboratory(protocol), step: 'general' as ProtocolStepKey },
+    { label: 'заполнены данные лаборатории', ok: hasLaboratory(protocol), step: 'laboratory' as ProtocolStepKey },
     { label: 'выполнена проверка нормативов', ok: hasCheckedResults(protocol), step: 'results' as ProtocolStepKey },
   ];
   const firstMissing = missingFields[0];
@@ -759,6 +759,11 @@ const ProtocolEditorPage = () => {
       toast.warning('Редактирование протокола закрыто для текущего статуса');
       return null;
     }
+    if (!hasText(snapshot.executorId)) {
+      toast.warning('Выберите исполнителя лаборатории', 'Если список пуст, добавьте активного сотрудника с правом выполнять измерения в настройках лаборатории.');
+      if (editSection !== 'laboratory') setEditSection('laboratory');
+      return null;
+    }
     const startedVersion = editVersionRef.current;
     const requestId = ++saveRequestRef.current;
     setSaveStatus('saving');
@@ -782,9 +787,23 @@ const ProtocolEditorPage = () => {
           toast.success('Протокол сохранен');
           return updated;
         }
+        // The user changed another field while this request was in flight. Keep
+        // those newer local values, but advance the optimistic-lock version from
+        // the successful response before the queued save starts. Otherwise the
+        // next request repeats the old version and creates a false conflict with
+        // this same user's preceding save.
+        savedSignatureRef.current = editableSignature(updated);
+        serverProtocolRef.current = updated;
+        const latestLocal = protocolRef.current;
+        const mergedLocal = latestLocal ? { ...latestLocal, version: updated.version } : updated;
+        protocolRef.current = mergedLocal;
+        setProtocol((current) => {
+          if (!current) return current;
+          return { ...current, version: updated.version };
+        });
         saveQueuedRef.current = true;
         setSaveStatus('dirty');
-        return protocolRef.current;
+        return mergedLocal;
       } catch (saveError) {
         if (isProtocolVersionConflict(saveError)) {
           conflictDetected = true;
@@ -1214,7 +1233,7 @@ const ProtocolEditorPage = () => {
             onChange={(samplingPoints) => patchProtocol({ samplingPoints })}
             onSave={() => { void save(); }}
           />}
-          <ProtocolResultsTable embedded protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} samplingPoints={protocol.samplingPoints} devices={protocol.measurementDevices} readOnly={!protocol.availableActions.edit} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onVersionChange={applyServerVersion} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />
+          <ProtocolResultsTable embedded protocolId={protocol.id} version={protocol.version} templateId={protocol.templateId} subtype={protocol.subtype} rows={protocol.results} samplingPoints={protocol.samplingPoints} devices={protocol.measurementDevices} laboratoryId={protocol.laboratory?.laboratoryId} readOnly={!protocol.availableActions.edit} busy={busy} objectId={protocol.objectId} measurementPlace={protocol.measurementPlace || ''} testingDate={protocol.testing.testingEndDate || protocol.testing.testingDate || protocol.protocolDate} waterType={protocol.waterType || String(protocol.conditions?.waterType || '')} waterUseCategory={protocol.waterUseCategory || String(protocol.conditions?.waterUseCategory || '')} onChange={applyServerResults} onVersionChange={applyServerVersion} onCheckNormatives={checkSavedNormatives} onImported={reloadProtocolResults} onNotify={notify} />
         </div>}
       </Modal>
 

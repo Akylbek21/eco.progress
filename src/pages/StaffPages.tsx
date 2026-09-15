@@ -833,7 +833,7 @@ export const StaffDashboardPage = () => {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 2xl:grid-cols-[1fr_320px]">
         <StaffPanel title={workplace.queueTitle}>
           {myTasks.map((task) => <WorkTaskCard key={task.id} task={task} />)}
           {!myTasks.length && <EmptyState text="Задач нет" />}
@@ -931,7 +931,7 @@ const ManagerDashboard = ({
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 2xl:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <StaffPanel title="Рабочий процесс менеджера">
             <div className="grid gap-4 md:grid-cols-2">
@@ -1033,7 +1033,7 @@ const AccountantDashboard = ({
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 2xl:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <StaffPanel title="Финансовая очередь">
             <div className="grid gap-4 md:grid-cols-2">
@@ -1391,7 +1391,7 @@ export const StaffOrdersPage = () => {
             <p className="rounded-full bg-eco-50 px-4 py-2 text-sm font-semibold text-eco-800">Найдено: {filtered.length}</p>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 lg:grid-cols-4 xl:grid-cols-8">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по номеру, компании, клиенту или услуге" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
           <select value={selectedCompany} onChange={(e) => setSelectedCompany(e.target.value)} className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3">
             <option value="all">Все компании-исполнители</option>
@@ -1406,10 +1406,10 @@ export const StaffOrdersPage = () => {
           <input value={date} onChange={(e) => setDate(e.target.value)} placeholder="Дата" className="input-focus min-w-0 rounded-2xl border border-slate-200 px-4 py-3" />
           <button type="button" onClick={() => { setQ(''); setStatus('Все'); setPayment('Все'); setRequestType('Все'); setQuarterFilter('Все'); setManager('Все'); setStage('Все'); setDate(''); setOnlyMyTasks(false); setSelectedCompany('all'); navigate('/staff/orders'); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-eco-800 transition hover:bg-eco-50">Сбросить</button>
         </div>
-        <div className="mt-5 space-y-3 lg:hidden">
+        <div className="mt-5 space-y-3 2xl:hidden">
           {filtered.map((order) => <OrderLine key={order.id} order={order} />)}
         </div>
-        <div className="mt-5 hidden overflow-x-auto lg:block">
+        <div className="mt-5 hidden overflow-x-auto 2xl:block">
           <table className="w-full min-w-[1650px] text-left text-sm">
             <thead className="text-slate-500">
               <tr><th className="p-3">№</th><th>Тип</th><th>Компания-исполнитель</th><th>Клиент</th><th>Договор</th><th>Услуга</th><th>Статус</th><th>Квартал</th><th>Прогресс</th>{access.viewFinance && <th>Долг</th>}<th>Оплата</th><th>Этап</th><th>Следующий шаг</th><th>Ответственный</th><th></th></tr>
@@ -2207,7 +2207,7 @@ export const StaffOrderDetailsPage = ({ onNotify }: { onNotify?: (message: strin
         </div>
       </Reveal>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
+      <div className="grid gap-6 2xl:grid-cols-[1fr_390px]">
         <Reveal>
           <div className="space-y-6">
             {currentTab === 'Обзор' && (
@@ -2863,7 +2863,7 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
 
       {activeTab === 'Обзор' && (
         <Reveal>
-          <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          <div className="grid gap-6 2xl:grid-cols-[1fr_360px]">
             <div className="space-y-6">
               <Section title="Данные заявки" icon={<ClipboardList size={20} />}>
                 <div className="grid gap-3 md:grid-cols-2">
@@ -2949,7 +2949,7 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
 
       {activeTab === 'Проектирование' && (
         <Reveal>
-          <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+          <div className="grid gap-6 2xl:grid-cols-[380px_1fr]">
             <Section title="Загрузка проектного документа" icon={<Upload size={20} />}>
               <form onSubmit={submitProjectDocument} className="space-y-4">
                 <Field label="Тип документа">
@@ -2993,7 +2993,7 @@ const EcologistRequestWorkspace = ({ order, userName, onNotify }: { order: Order
 
       {activeTab === 'Разрешение' && (
         <Reveal>
-          <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+          <div className="grid gap-6 2xl:grid-cols-[380px_1fr]">
             <Section title="Загрузка документа по разрешению" icon={<Upload size={20} />}>
               <form onSubmit={submitPermitDocument} className="space-y-4">
                 <Field label="Название документа">
@@ -3127,7 +3127,7 @@ const EcoWorkDocumentTab = ({ order, userName, mode, onNotify }: { order: Order;
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+    <div className="grid gap-6 2xl:grid-cols-[380px_1fr]">
       <Section title={config.uploadTitle} icon={<Upload size={20} />}>
         <form onSubmit={submitDocument} className="space-y-4">
           <Field label="Тип документа">
@@ -4482,7 +4482,7 @@ export const StaffClientsPage = () => {
             </div>
           </div>
         </Reveal>
-        <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
+        <div className="grid gap-6 2xl:grid-cols-[1fr_390px]">
           <div className="space-y-6">
             <Section title="Заявки" icon={<ClipboardList size={20} />}>
               {selectedOrders.map((order) => <OrderLine key={order.id} order={order} />)}

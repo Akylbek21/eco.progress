@@ -56,6 +56,7 @@ afterEach(() => { calls.length = 0; });
 const component = () => readFileSync(resolve(process.cwd(), 'src/features/pek/components/documents/PekReportDocuments.tsx'), 'utf8');
 const contracts = () => readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekContracts.ts'), 'utf8');
 const service = () => readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekService.ts'), 'utf8');
+const mutation = () => readFileSync(resolve(process.cwd(), 'src/features/pek/api/pekMutation.ts'), 'utf8');
 
 describe('PEK P2 historical documents', () => {
   it('downloads historical DOCX and PDF through authenticated API by version.id', async () => {
@@ -121,5 +122,11 @@ describe('PEK P2 historical documents', () => {
     expect(all).not.toContain('signatureFileId');
     expect(all).not.toContain('cmsFileId');
     expect(all).not.toContain('Скачивание исторической версии не поддерживается backend');
+  });
+
+  it('allows slow report and package generation to finish', () => {
+    expect(mutation()).toContain('PEK_DOCUMENT_GENERATION_TIMEOUT_MS = 120_000');
+    expect(service()).toMatch(/generateReportDocument[\s\S]*pekDocumentMutationOptions\(version\)/);
+    expect(service()).toMatch(/generateReportPackage[\s\S]*pekDocumentMutationOptions\(version\)/);
   });
 });

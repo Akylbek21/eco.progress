@@ -61,4 +61,7 @@ export type CreateProtocolFromPekRequest = Pick<ProtocolCreationRequirement,
   | 'pekControlItemId'
   | 'monitoringPointId'
   | 'protocolTemplateId'
->;
+> & {
+  programIndicatorId?: string | number | null;
+  date?: string;
+};

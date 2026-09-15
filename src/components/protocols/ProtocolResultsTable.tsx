@@ -7,7 +7,7 @@ import NormativeStatusBadge, { normativeStatusLabels } from './NormativeStatusBa
 import RawMeasurementsModal from './RawMeasurementsModal';
 import protocolService from '../../services/protocolService';
 import { normalizeApiError } from '../../services/apiHelpers';
-import { getMeasurementDevices } from '../../services/measurementDeviceService';
+import { getAvailableMeasurementDevices } from '../../services/measurementDeviceService';
 import { getPhysicalFactorIndicators } from '../../data/physicalFactors';
 import { subtypeName } from '../../data/protocolTemplates';
 import { resolveNormativeSearchContext } from '../../data/protocolTypeConfig';
@@ -51,6 +51,7 @@ type Props = {
   readOnly: boolean;
   busy?: boolean;
   testingDate?: string;
+  laboratoryId?: string | number;
   objectId?: string | number;
   measurementPlace?: string;
   waterType?: string;
@@ -340,7 +341,7 @@ const exceededText = (row: ProtocolResultRow, templateId: ProtocolTemplateKey) =
 };
 
 const ProtocolResultsTable = ({
-  protocolId, version, templateId, subtype, rows, devices = [], samplingPoints = [], readOnly, busy = false, testingDate = '', objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
+  protocolId, version, templateId, subtype, rows, devices = [], samplingPoints = [], readOnly, busy = false, testingDate = '', laboratoryId, objectId, measurementPlace: defaultMeasurementPlace = '', waterType = '', waterUseCategory = '',
   onChange, onVersionChange, onCheckNormatives, onImported, onNotify, onGoToInstruments, embedded = false,
 }: Props) => {
   const { user } = useAuth();
@@ -497,14 +498,14 @@ const ProtocolResultsTable = ({
   const reviewRow = rows.find((row) => ['EXCEEDED', 'BELOW_REQUIRED', 'UNIT_MISMATCH', 'NEEDS_REVIEW', 'MANUAL_NORMATIVE'].includes(String(statusOf(row, templateId))));
 
   useEffect(() => {
-    if (!addOpen) return;
-    getMeasurementDevices({ status: 'VALID' })
+    if (!addOpen && !editing) return;
+    getAvailableMeasurementDevices({ laboratoryId, measurementDate: testingDate })
       .then((items) => setAvailableDevices(items))
       .catch((loadError) => {
         setAvailableDevices([]);
         onNotify(loadError instanceof Error ? loadError.message : 'Не удалось загрузить доступные приборы', 'error');
       });
-  }, [addOpen]);
+  }, [addOpen, editing, laboratoryId, testingDate]);
 
   const openAddDialog = (initialQuery = '') => {
     setAddOpen(true);
@@ -881,6 +882,16 @@ const ProtocolResultsTable = ({
     if (!form.primaryReading.trim() && !form.readings.trim()) return onNotify('Введите первичные показания', 'warning');
     setSaving(true);
     try {
+      let currentVersion = version;
+      const selectedDeviceId = form.measurementDeviceId;
+      const alreadyAttached = devices.some((item) => String(item.deviceId) === selectedDeviceId);
+      if (selectedDeviceId && !alreadyAttached) {
+        const selectedDevice = availableDevices.find((item) => String(item.id) === selectedDeviceId);
+        if (!selectedDevice) throw new Error('Выбранный прибор недоступен. Обновите список приборов.');
+        const withDevice = await protocolService.addProtocolMeasurementDevice(protocolId, selectedDevice, currentVersion);
+        currentVersion = withDevice.version;
+        onVersionChange(currentVersion);
+      }
       const resultValue = form.primaryReading.trim() || null;
       const request = mapProtocolResultFormToRequest({
         measurementDeviceId: form.measurementDeviceId || undefined,
@@ -903,7 +914,7 @@ const ProtocolResultsTable = ({
         },
       });
       const updatedProtocol = await protocolService.saveProtocolDraftResults(protocolId, {
-        version,
+        version: currentVersion,
         added: [],
         updated: [{ ...request, id: editing.id }],
         deletedIds: [],
@@ -1681,7 +1692,7 @@ const ProtocolResultsTable = ({
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Показание / концентрация<input autoFocus value={form.primaryReading || ''} onChange={(event) => setForm({ ...form, primaryReading: event.target.value })} className={inputClass} /></label>
           <label className="space-y-1.5 text-sm font-bold text-slate-700">Серия показаний<textarea rows={2} value={form.readings || ''} onChange={(event) => setForm({ ...form, readings: event.target.value })} placeholder="Через запятую: 418, 421, 416" className={inputClass} /></label>
-          <label className="space-y-1.5 text-sm font-bold text-slate-700">Прибор<select value={form.measurementDeviceId || ''} onChange={(event) => setForm({ ...form, measurementDeviceId: event.target.value })} className={inputClass}><option value="">Не выбран</option>{devices.map((item) => <option key={item.deviceId} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}</select></label>
+          <label className="space-y-1.5 text-sm font-bold text-slate-700">Прибор<select value={form.measurementDeviceId || ''} onChange={(event) => setForm({ ...form, measurementDeviceId: event.target.value })} className={inputClass}><option value="">Не выбран</option>{devices.map((item) => <option key={`attached-${item.deviceId}`} value={item.deviceId}>{item.deviceSnapshot.name} · {item.deviceSnapshot.serialNumber}</option>)}{availableDevices.filter((device) => !devices.some((item) => String(item.deviceId) === String(device.id))).map((device) => <option key={`available-${device.id}`} value={device.id}>{device.name} {device.serialNumber ? `· ${device.serialNumber}` : ''}</option>)}</select></label>
           {!isAmbientAirProtocol && <label className="space-y-1.5 text-sm font-bold text-slate-700">Место замера<input value={form.measurementPlace || ''} onChange={(event) => setForm({ ...form, measurementPlace: event.target.value })} className={inputClass} /></label>}
           {isAmbientAirProtocol && <label className="space-y-1.5 text-sm font-bold text-slate-700">Место отбора *<select value={form.samplingPointId || ''} onChange={(event) => setForm({ ...form, samplingPointId: event.target.value })} className={inputClass}><option value="">Выберите место отбора</option>{samplingPoints.map((point) => <option key={String(point.id)} value={String(point.id)}>{point.name}</option>)}</select></label>}
           {templateId === 'industrial_emissions' && <label className="space-y-1.5 text-sm font-bold text-slate-700">Источник<input value={form.sourceNumber || ''} onChange={(event) => setForm({ ...form, sourceNumber: event.target.value })} className={inputClass} /></label>}

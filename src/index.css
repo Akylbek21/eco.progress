@@ -205,6 +205,76 @@ svg {
   white-space: nowrap;
 }
 
+/* Laptop workspace: the persistent sidebar leaves roughly 1,000–1,200px for content.
+   Keep controls comfortably sized and prevent desktop-only density from squeezing forms. */
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .staff-crm {
+    font-size: 0.9375rem;
+  }
+
+  .staff-crm :where(section, article, form)[class*="p-6"],
+  .staff-crm :where(section, article, form)[class*="p-8"] {
+    padding: 1.25rem;
+  }
+
+  .staff-crm :where(input, select, textarea, button) {
+    min-width: 0;
+  }
+
+  .staff-crm :where(.gap-6) {
+    gap: 1.25rem;
+  }
+}
+
+/* Staff CRM on notebooks: fit working tables into the available column instead of
+   exposing desktop-width tables and permanent horizontal scrollbars. */
+@media (min-width: 1024px) and (max-width: 1535px) {
+  .staff-crm {
+    overflow-x: clip;
+  }
+
+  .staff-crm :where(nav, [role="tablist"]).overflow-x-auto,
+  .staff-crm .pek-section-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .staff-crm :where(nav, [role="tablist"]).overflow-x-auto > *,
+  .staff-crm .pek-section-nav :where(button, a) {
+    flex: 1 1 auto;
+    min-width: max-content;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .staff-crm table[class*="min-w-"] {
+    width: 100%;
+    min-width: 100% !important;
+    table-layout: fixed;
+  }
+
+  .staff-crm table[class*="min-w-"] :where(th, td) {
+    width: auto;
+    padding: 0.5rem !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .staff-crm table[class*="min-w-"] :where(button, a) {
+    white-space: normal;
+  }
+
+  .staff-crm .overflow-x-auto:not(nav):not([role="tablist"]) {
+    overflow-x: hidden;
+  }
+
+  .staff-crm .overflow-auto:has(table[class*="min-w-"]) {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
 /* The staff sidebar reduces the usable width before viewport breakpoints do.
    Keep dense PEK forms readable on compact laptop and tablet widths. */
 @media (min-width: 768px) and (max-width: 1279px) {
@@ -234,42 +304,50 @@ svg {
   word-break: normal;
 }
 
-/* Compact PEK workbench. Kept local to the module so public/admin UI is unchanged. */
+/* Calm, task-oriented PEK workbench. Kept local so public/admin UI is unchanged. */
 .pek-module {
-  --pek-line: #d9e2ec;
+  --pek-line: #e2e8f0;
+  --pek-surface: #ffffff;
+  --pek-soft: #f6f9fb;
+  --pek-accent-soft: #eaf7f3;
   font-size: 0.875rem;
+  color: #1e293b;
 }
 
 .pek-module > div:first-child {
-  border-radius: 0.375rem;
-  box-shadow: none;
+  border-radius: 1rem;
+  background: #f8fafc;
 }
 
 .pek-module nav.sticky {
-  top: 0;
+  top: 0.5rem;
   border-color: var(--pek-line);
-  box-shadow: 0 1px 0 rgb(15 23 42 / 0.04);
+  border-radius: 0.875rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.07);
 }
 
 .pek-module nav.sticky button {
   min-height: 2.5rem;
-  border-right: 1px solid #e8edf3;
-  padding: 0.625rem 0.875rem;
-  font-size: 0.8125rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
 }
 
-.pek-module :where(section, article)[class*="rounded-2xl"] { border-radius: 0.375rem; }
-.pek-module :where(section, article)[class*="p-5"] { padding: 0.875rem; }
-.pek-module :where(section, article)[class*="p-8"] { padding: 1rem; }
-.pek-module table { border-collapse: collapse; font-size: 0.78rem; }
-.pek-module th { background: #f4f7fa; color: #25364b; font-size: 0.72rem; }
-.pek-module :where(th, td) {
-  border: 1px solid var(--pek-line);
-  padding: 0.5rem 0.625rem;
-  vertical-align: top;
+.pek-module :where(section, article)[class*="rounded-2xl"] {
+  border-color: var(--pek-line);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.035);
 }
-.pek-module tbody tr:hover { background: #f8fbfd; }
-.pek-module :where(input, select, textarea) { border-radius: 0.25rem !important; }
+.pek-module :where(section, article)[class*="p-5"] { padding: 1.125rem; }
+.pek-module :where(section, article)[class*="p-8"] { padding: 1.25rem; }
+.pek-module table { border-collapse: separate; border-spacing: 0; font-size: 0.82rem; }
+.pek-module th { background: var(--pek-soft); color: #334155; font-size: 0.72rem; letter-spacing: 0.025em; }
+.pek-module :where(th, td) {
+  border-bottom: 1px solid var(--pek-line);
+  padding: 0.7rem 0.8rem;
+  vertical-align: middle;
+}
+.pek-module tbody tr:hover { background: #f5fbf9; }
+.pek-module :where(input, select, textarea) { min-height: 2.65rem; border-radius: 0.625rem !important; }
 
 .pek-workspace-breadcrumb + div > header {
   margin-inline: -0.25rem;
@@ -341,12 +419,13 @@ svg {
 
 .pek-module button,
 .pek-module a[class*="border"] {
-  border-radius: 0.3rem;
+  min-height: 2.5rem;
+  border-radius: 0.625rem;
 }
 
 .pek-module button[class*="bg-eco"],
 .pek-module .MuiButton-contained {
-  box-shadow: none;
+  box-shadow: 0 4px 12px rgb(8 117 107 / 0.18);
 }
 
 @media (min-width: 1536px) {
@@ -383,21 +462,23 @@ svg {
   }
 }
 
-/* Protocol workbench follows the same compact visual language as PEK. */
+/* Protocol workbench follows the same calm visual language as PEK. */
 .protocol-workspace {
-  --protocol-line: #d9e2ec;
+  --protocol-line: #e2e8f0;
   font-size: 0.875rem;
+  color: #1e293b;
 }
 
 .protocol-workspace :where(header, section, article)[class*="rounded-2xl"] {
-  border-radius: 0.375rem;
-  box-shadow: none;
+  border-color: var(--protocol-line);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.035);
 }
 
-.protocol-workspace :where(section, article)[class*="p-5"] { padding: 0.875rem; }
-.protocol-workspace :where(section, article)[class*="p-4"] { padding: 0.75rem; }
-.protocol-workspace nav[aria-label="Разделы протокола"] { background: #fff; }
-.protocol-workspace nav[aria-label="Разделы протокола"] button { padding-block: 0.625rem; }
+.protocol-workspace :where(section, article)[class*="p-5"] { padding: 1.125rem; }
+.protocol-workspace :where(section, article)[class*="p-4"] { padding: 1rem; }
+.protocol-workspace nav[aria-label="Разделы протокола"] { border-radius: 0.875rem 0.875rem 0 0; background: #fff; }
+.protocol-workspace nav[aria-label="Разделы протокола"] button { min-height: 2.75rem; padding-block: 0.7rem; }
 
 .protocol-summary-grid > section {
   min-width: 0;
@@ -420,14 +501,15 @@ svg {
 .protocol-summary-grid > section:nth-child(2) { border-color: #f0c769; background: #fffdf7; }
 
 .protocol-workspace table {
-  border-collapse: collapse;
-  font-size: 0.8rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
 }
 
 .protocol-workspace :where(th, td) {
-  border: 1px solid var(--protocol-line);
-  padding: 0.55rem 0.7rem !important;
-  vertical-align: top;
+  border-bottom: 1px solid var(--protocol-line);
+  padding: 0.7rem 0.8rem !important;
+  vertical-align: middle;
 }
 
 .protocol-workspace thead th {
@@ -436,8 +518,8 @@ svg {
   font-size: 0.72rem;
 }
 
-.protocol-workspace tbody tr:hover { background: #f8fbfd; }
-.protocol-workspace button { border-radius: 0.3rem; }
+.protocol-workspace tbody tr:hover { background: #f5fbf9; }
+.protocol-workspace button { min-height: 2.5rem; border-radius: 0.625rem; }
 
 @media (max-width: 1279px) {
   .protocol-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
