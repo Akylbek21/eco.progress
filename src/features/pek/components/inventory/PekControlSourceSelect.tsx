@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Alert, MenuItem, TextField } from '@mui/material';
+import { Alert, Autocomplete, TextField } from '@mui/material';
 import { useAuth } from '../../../../contexts/AuthContext';
 import type { PekControlItem } from '../../api/pekContracts';
 import { pekInventoryApi } from '../../api/pekInventory';
@@ -35,14 +35,25 @@ export default function PekControlSourceSelect({ programId, value, onChange }: {
   if (!programId) return <Alert severity="info">Сохраните черновик программы, добавьте источники в «Реестрах» и точки в «Производственном мониторинге», затем выберите их при редактировании позиции.</Alert>;
   if (query.isError) return <PekQueryError error={query.error} resource="Источники программы" retry={() => void query.refetch()} />;
   return <div className="grid gap-3 md:col-span-3 sm:grid-cols-2">{sources.map(([key, label]) => {
-    const options = query.data?.[key] || [];
+    const options = (query.data?.[key] || []).map(option => ({ id: Number(option.id), name: String(option.name) }));
     const missing = value[key] != null && !options.some(option => option.id === value[key]);
-    return <TextField key={key} select label={label} value={value[key] ?? ''} disabled={query.isPending}
-      helperText={query.isPending ? 'Загрузка…' : missing ? 'Связанный источник недоступен. Выберите актуальный.' : !options.length ? 'Добавьте записи в соответствующем разделе программы.' : 'Источники текущей программы'}
-      error={missing && !query.isPending} onChange={event => onChange({ [key]: event.target.value ? Number(event.target.value) : null })}>
-      <MenuItem value="">Не выбран</MenuItem>
-      {missing && <MenuItem value={value[key]!} disabled>Источник недоступен</MenuItem>}
-      {options.map(option => <MenuItem key={option.id} value={option.id}>{String(option.name)}</MenuItem>)}
-    </TextField>;
+    const selected = options.find(option => option.id === value[key]) ?? null;
+    return <Autocomplete
+      key={key}
+      options={options}
+      value={selected}
+      disabled={query.isPending}
+      getOptionLabel={option => option.name}
+      isOptionEqualToValue={(option, selectedOption) => option.id === selectedOption.id}
+      noOptionsText="Совпадений нет"
+      onChange={(_, option) => onChange({ [key]: option?.id ?? null })}
+      renderInput={params => <TextField
+        {...params}
+        label={label}
+        placeholder="Введите или выберите"
+        helperText={query.isPending ? 'Загрузка…' : missing ? 'Связанная запись недоступна. Выберите актуальную.' : !options.length ? 'Сначала добавьте запись в соответствующем разделе программы.' : 'Начните вводить название или выберите из списка'}
+        error={missing && !query.isPending}
+      />}
+    />;
   })}</div>;
 }
