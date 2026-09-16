@@ -59,4 +59,11 @@ describe('PEK report package backend contract', () => {
     expect(component).toContain('Сформируйте новую версию');
     expect(component).not.toContain('/STALE|OUTDATED/i');
   });
+
+  it('shows actionable document and package conflicts instead of a generic 409 message', () => {
+    expect(mapPekError({ isAxiosError: true, response: { status: 409, data: { code: 'PEK_MONITORING_EMPTY' } } }).message)
+      .toContain('нет включённых направлений');
+    expect(mapPekError({ isAxiosError: true, response: { status: 409, data: { code: 'PEK_REPORT_DOCUMENT_LOCKED' } } }).message)
+      .toContain('после подписания');
+  });
 });

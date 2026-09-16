@@ -4,6 +4,7 @@ import BackendFeatureUnavailable from '../../components/ui/BackendFeatureUnavail
 import { useToast } from '../../hooks/useToast';
 import { getApiErrorMessage } from '../../services/apiHelpers';
 import { getLeads, updateLeadStatus, type LeadStatus } from '../../services/leadService';
+import { formatLeadCreatedAt, leadCreatedAtDateKey } from '../../utils/leadDateTime';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'in_progress', 'closed'];
 const statusLabels: Record<LeadStatus, string> = {
@@ -39,7 +40,7 @@ const StaffLeadsPage = () => {
     return (!query || text.includes(query.toLowerCase()))
       && (status === 'all' || lead.status === status)
       && (source === 'all' || lead.source === source)
-      && (!date || lead.createdAt.slice(0, 10) === date);
+      && (!date || leadCreatedAtDateKey(lead.createdAt) === date);
   }), [leads, query, status, source, date]);
 
   const changeStatus = async (id: string, nextStatus: LeadStatus) => {
@@ -69,7 +70,7 @@ const StaffLeadsPage = () => {
         <table className="min-w-[980px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-500"><th className="p-3">Дата</th><th className="p-3">Контакт</th><th className="p-3">Город / услуга</th><th className="p-3">Источник</th><th className="p-3">Комментарий</th><th className="p-3">Статус</th></tr></thead>
           <tbody>{filtered.map((lead) => {
             const sourcePath = safeInternalPath(lead.attribution?.sourceUrl);
-            return <tr key={lead.id} className="border-b border-slate-100"><td className="p-3">{lead.createdAt}</td><td className="p-3"><p className="font-bold">{lead.name}</p><p>{lead.phone}</p></td><td className="p-3">{lead.city}<br />{lead.serviceType}</td><td className="p-3"><p>{lead.source}</p>{lead.attribution && <div className="mt-2 space-y-1 text-xs text-slate-500"><p>{lead.attribution.sourceType || 'PAGE'}{lead.attribution.sourceSlug ? ` · ${lead.attribution.sourceSlug}` : ''}</p>{lead.attribution.serviceSlug && <p>Услуга: {lead.attribution.serviceSlug}</p>}{lead.attribution.utmCampaign && <p>UTM: {lead.attribution.utmCampaign}</p>}{sourcePath && <a className="font-semibold text-eco-700 underline" href={sourcePath} target="_blank" rel="noreferrer">Открыть источник</a>}</div>}</td><td className="max-w-xs p-3">{lead.comment}</td><td className="p-3"><select value={lead.status} disabled={updatingId === lead.id} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)} className="rounded-xl border border-slate-200 px-3 py-2">{statuses.map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}</select></td></tr>;
+            return <tr key={lead.id} className="border-b border-slate-100"><td className="p-3"><time dateTime={lead.createdAt}>{formatLeadCreatedAt(lead.createdAt)}</time></td><td className="p-3"><p className="font-bold">{lead.name}</p><p>{lead.phone}</p></td><td className="p-3">{lead.city}<br />{lead.serviceType}</td><td className="p-3"><p>{lead.source}</p>{lead.attribution && <div className="mt-2 space-y-1 text-xs text-slate-500"><p>{lead.attribution.sourceType || 'PAGE'}{lead.attribution.sourceSlug ? ` · ${lead.attribution.sourceSlug}` : ''}</p>{lead.attribution.serviceSlug && <p>Услуга: {lead.attribution.serviceSlug}</p>}{lead.attribution.utmCampaign && <p>UTM: {lead.attribution.utmCampaign}</p>}{sourcePath && <a className="font-semibold text-eco-700 underline" href={sourcePath} target="_blank" rel="noreferrer">Открыть источник</a>}</div>}</td><td className="max-w-xs p-3">{lead.comment}</td><td className="p-3"><select value={lead.status} disabled={updatingId === lead.id} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)} className="rounded-xl border border-slate-200 px-3 py-2">{statuses.map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}</select></td></tr>;
           })}</tbody>
         </table>
       </div>

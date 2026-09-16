@@ -50,7 +50,10 @@ api.interceptors.response.use(
     }
 
     const requestPath = String(error.config?.url || '').replace(/^\/api/, '').split('?')[0];
-    if (import.meta.env.DEV && !requestPath.startsWith('/public/')) {
+    const isExpectedMissingPekPackage = error.response?.status === 404
+      && String(error.config?.method || 'GET').toUpperCase() === 'GET'
+      && /^\/pek\/reports\/\d+\/package$/.test(requestPath);
+    if (import.meta.env.DEV && !requestPath.startsWith('/public/') && !isExpectedMissingPekPackage) {
       const parsed = normalizeApiError(error);
       console.error('[API error]', {
         url: error.config?.url,

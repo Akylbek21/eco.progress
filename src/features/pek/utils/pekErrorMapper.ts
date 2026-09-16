@@ -11,6 +11,9 @@ const messages: Record<string, string> = {
   PEK_EVIDENCE_FILE_FORBIDDEN: 'У вас нет доступа к выбранному файлу доказательства.',
   PEK_EVIDENCE_FILE_SCOPE_MISMATCH: 'Файл доказательства относится к другой компании или области доступа.',
   PEK_DOCUMENT_STALE: 'Документ устарел. Сформируйте его заново.',
+  PEK_REPORT_DOCUMENT_LOCKED: 'Документы отчёта нельзя формировать после подписания или архивации отчёта.',
+  PEK_MONITORING_EMPTY: 'В программе ПЭК нет включённых направлений мониторинга. Добавьте хотя бы одно направление в программу.',
+  PEK_PACKAGE_DUPLICATE_ENTRY: 'В комплекте ПЭК обнаружены файлы с одинаковыми именами. Проверьте настройки направлений мониторинга.',
   PEK_REPORT_DUPLICATE: 'Отчёт за этот период уже существует',
   PEK_REPORT_ALREADY_EXISTS: 'Отчёт за этот период уже существует',
   PEK_ACTIVE_PROGRAM_MISSING: 'Для выбранного объекта нет действующей программы ПЭК',
@@ -74,11 +77,12 @@ export const mapPekError = (error: unknown): PekUiError => {
   const conflictMessage = versionConflict
     ? 'Данные были изменены другим сотрудником.\nОбновите страницу и повторите действие.'
     : undefined;
-  const businessMessage = parsed.code && (
-    parsed.code === 'PEK_DOCUMENT_STALE'
-    || parsed.code === 'PEK_PROGRAM_NOT_EDITABLE'
-    || parsed.code.startsWith('PEK_EVIDENCE_FILE_')
-  ) ? messages[parsed.code] : undefined;
+  const businessMessage = parsed.code ? messages[parsed.code] : undefined;
+  const backendMessage = (status === 409 || status === 412)
+    && parsed.message
+    && !/^Request failed with status code (409|412)$/.test(parsed.message)
+    ? parsed.message
+    : undefined;
   const statusMessage = status === 401 ? 'Сессия истекла. Войдите снова.'
     : status === 403 ? 'У вас нет доступа к этой компании или операции ПЭК. Обратитесь к администратору.'
       : status === 404 ? 'Программа или отчёт не найден.'
@@ -88,7 +92,7 @@ export const mapPekError = (error: unknown): PekUiError => {
             : (status || 0) >= 500 ? 'Внутренняя ошибка сервиса. Повторите позже.'
               : undefined;
   return {
-    message: businessMessage || conflictMessage || (parsed.code && messages[parsed.code] ? messages[parsed.code] : statusMessage || parsed.message),
+    message: businessMessage || conflictMessage || backendMessage || statusMessage || parsed.message,
     code: parsed.code,
     status,
     fieldErrors: parsed.fieldErrors,

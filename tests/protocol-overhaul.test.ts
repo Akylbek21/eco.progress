@@ -197,6 +197,26 @@ describe('protocol mutation HTTP contracts', () => {
       currentVersion: 14,
     });
   });
+
+  it('extracts an existing protocol id from conflict fieldErrors', () => {
+    const parsed = normalizeApiError({
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          code: 'PROTOCOL_DRAFT_ALREADY_EXISTS',
+          message: 'Для этого требования ПЭК уже создан черновик протокола',
+          errors: ['92'],
+          fieldErrors: { resourceId: '92' },
+        },
+      },
+    });
+    expect(parsed).toMatchObject({
+      status: 409,
+      code: 'PROTOCOL_DRAFT_ALREADY_EXISTS',
+      resourceId: '92',
+    });
+  });
 });
 
 describe('weather conditions', () => {

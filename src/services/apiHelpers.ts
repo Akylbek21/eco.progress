@@ -139,6 +139,7 @@ const safeBackendMessage = (value: unknown): string | undefined => {
 const extractConflictResourceId = (response: UnknownRecord | null | undefined): string | undefined => {
   if (!response) return undefined;
   const nested = asRecord(response.data);
+  const fieldErrors = asRecord(response.fieldErrors) || asRecord(nested?.fieldErrors);
   const details = asRecord(response.details) || asRecord(nested?.details);
   const conflict = asRecord(response.conflict) || asRecord(nested?.conflict);
   const existing = asRecord(response.existingProtocol)
@@ -154,6 +155,9 @@ const extractConflictResourceId = (response: UnknownRecord | null | undefined): 
     nested?.protocolId,
     nested?.existingId,
     nested?.resourceId,
+    fieldErrors?.resourceId,
+    fieldErrors?.existingProtocolId,
+    fieldErrors?.protocolId,
     details?.existingProtocolId,
     details?.protocolId,
     conflict?.existingProtocolId,
