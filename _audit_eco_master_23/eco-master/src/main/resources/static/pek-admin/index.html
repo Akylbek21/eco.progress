@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Настройка ПЭК</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f4f6f8; color: #1c2530; }
+  header { background: #1c2530; color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .layout { display: flex; min-height: calc(100vh - 56px); }
+  nav { width: 240px; background: #fff; border-right: 1px solid #e1e5ea; padding: 16px 0; flex-shrink: 0; }
+  nav button { display: block; width: 100%; text-align: left; padding: 12px 24px; border: none; background: none; font-size: 14px;
+    cursor: pointer; color: #3a4552; border-left: 3px solid transparent; }
+  nav button:hover { background: #f0f3f6; }
+  nav button.active { border-left-color: #2563eb; color: #2563eb; background: #eef3ff; font-weight: 600; }
+  main { flex: 1; padding: 24px; max-width: 1100px; }
+  section { display: none; }
+  section.active { display: block; }
+  h2 { margin-top: 0; font-size: 20px; }
+  .muted { color: #6b7684; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eef1f4; font-size: 13px; }
+  th { background: #fafbfc; font-weight: 600; color: #55606c; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge.active { background: #dcfce7; color: #15803d; }
+  .badge.archived { background: #f1f2f4; color: #6b7684; }
+  .badge.mandatory { background: #fee2e2; color: #b91c1c; }
+  .badge.optional { background: #e0f2fe; color: #0369a1; }
+  button.action { padding: 6px 12px; border-radius: 6px; border: 1px solid #d7dce2; background: #fff; cursor: pointer; font-size: 12px; margin-right: 6px; }
+  button.action:hover { background: #f4f6f8; }
+  button.action.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  button.action.danger { background: #fff; color: #dc2626; border-color: #f3c6c6; }
+  button.action:disabled { opacity: .4; cursor: not-allowed; }
+  .card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  .form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .form-row input, .form-row select { padding: 7px 10px; border: 1px solid #d7dce2; border-radius: 6px; font-size: 13px; flex: 1; min-width: 160px; }
+  .error { color: #dc2626; font-size: 13px; margin-top: 8px; }
+  .login-box { max-width: 360px; margin: 80px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  .login-box input { width: 100%; padding: 9px 10px; margin-bottom: 10px; border: 1px solid #d7dce2; border-radius: 6px; }
+  .login-box button { width: 100%; padding: 10px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  .pill { font-size: 11px; color: #6b7684; }
+  #toast { position: fixed; bottom: 20px; right: 20px; background: #1c2530; color: #fff; padding: 10px 16px; border-radius: 6px; display: none; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-box">
+  <h2 style="margin-bottom:16px">Настройка ПЭК</h2>
+  <p class="muted" style="margin-top:-8px">Вход для администраторов (роль ADMIN).</p>
+  <input id="loginEmail" type="email" placeholder="Email">
+  <input id="loginPassword" type="password" placeholder="Пароль">
+  <button onclick="doLogin()">Войти</button>
+  <div id="loginError" class="error"></div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>Настройка ПЭК</h1>
+    <div>
+      <span id="whoami" class="pill" style="color:#c9d2dc;margin-right:12px"></span>
+      <button class="action" onclick="doLogout()">Выйти</button>
+    </div>
+  </header>
+  <div class="layout">
+    <nav>
+      <button data-tab="regulation" class="active" onclick="showTab('regulation')">Нормативная база</button>
+      <button data-tab="reportTypes" onclick="showTab('reportTypes')">Типы отчётов</button>
+      <button data-tab="deadlines" onclick="showTab('deadlines')">Сроки сдачи</button>
+      <button data-tab="tables" onclick="showTab('tables')">Официальные таблицы</button>
+      <button data-tab="catalogs" onclick="showTab('catalogs')">Справочники</button>
+    </nav>
+    <main>
+
+      <section id="tab-regulation" class="active">
+        <h2>Нормативная база</h2>
+        <p class="muted">Одновременно действует только одна версия. Активация новой автоматически архивирует предыдущую.
+          Изменения не затрагивают уже созданные программы и отчёты — они сохраняют свою версию.</p>
+        <div class="card">
+          <strong>Новая версия</strong>
+          <div class="form-row" style="margin-top:10px">
+            <input id="rv-code" placeholder="code, напр. PEK_RULES_XXX">
+            <input id="rv-title" placeholder="title">
+            <input id="rv-effectiveFrom" type="date">
+          </div>
+          <div class="form-row">
+            <input id="rv-baseOrder" placeholder="baseOrder (реквизиты приказа)">
+          </div>
+          <div class="form-row">
+            <input id="rv-programTemplateVersion" placeholder="programTemplateVersion">
+            <input id="rv-reportTemplateVersion" placeholder="reportTemplateVersion">
+          </div>
+          <button class="action primary" onclick="createRegulationVersion()">Создать (в статусе ARCHIVED)</button>
+          <div id="rv-error" class="error"></div>
+        </div>
+        <table id="rv-table">
+          <thead><tr><th>Код</th><th>Название</th><th>Действует с</th><th>Действует по</th><th>Шаблон</th>
+            <th>Статус</th><th>Изменил</th><th>Когда</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section id="tab-reportTypes">
+        <h2>Типы отчётов</h2>
+        <p class="muted">Классификация типа отчёта выполняется backend'ом (период + признак объекта), не настраивается вручную.</p>
+        <table id="rt-table">
+          <thead><tr><th>Код</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section id="tab-deadlines">
+        <h2>Сроки сдачи</h2>
+        <p class="muted">Правило: N-й месяц после окончания периода, срок — 1-е число этого месяца (календарное правило,
+          не количество дней — устойчиво к длине месяца).</p>
+        <div class="card">
+          <strong>Новое правило</strong>
+          <div class="form-row" style="margin-top:10px">
+            <select id="dr-reportType"></select>
+            <select id="dr-regulationCode"></select>
+            <input id="dr-months" type="number" min="0" placeholder="месяцев после периода">
+          </div>
+          <div class="form-row"><input id="dr-description" placeholder="описание"></div>
+          <button class="action primary" onclick="createDeadlineRule()">Создать</button>
+          <div id="dr-error" class="error"></div>
+        </div>
+        <table id="dr-table">
+          <thead><tr><th>Тип отчёта</th><th>Версия</th><th>Месяцев</th><th>Описание</th><th>Активно</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section id="tab-tables">
+        <h2>Официальные таблицы</h2>
+        <div class="form-row" style="max-width:360px">
+          <select id="ot-regulationCode" onchange="loadOfficialTables()"></select>
+        </div>
+        <p class="muted">Обязательность/применимость здесь — описательные метаданные для интерфейса; фактическую блокировку
+          готовности отчёта по-прежнему определяет backend (readiness) и не может быть отключена отсюда.</p>
+        <table id="ot-table">
+          <thead><tr><th>#</th><th>Таблица</th><th>Обязательна</th><th>Применима</th><th>Периодичность</th>
+            <th>Обязательные поля</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section id="tab-catalogs">
+        <h2>Справочники</h2>
+        <p class="muted">Единый источник для всех модулей — не дублируются по отдельным разделам.</p>
+        <div id="catalogs-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px"></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api/pek/admin/regulation';
+let TOKEN = localStorage.getItem('pek_admin_token') || '';
+let ME = null;
+
+function authHeaders(extra) {
+  const h = Object.assign({ 'Authorization': 'Bearer ' + TOKEN }, extra || {});
+  return h;
+}
+
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#dc2626' : '#1c2530';
+  t.style.display = 'block';
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.style.display = 'none', 3500);
+}
+
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = authHeaders(opts.headers || (opts.body ? { 'Content-Type': 'application/json' } : {}));
+  const res = await fetch(API + path, opts);
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = (body && (body.message || body.code)) || ('HTTP ' + res.status);
+    throw new Error(msg);
+  }
+  return body ? body.data : null;
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  document.getElementById('loginError').textContent = '';
+  try {
+    const res = await fetch('/api/auth/staff/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.message || 'Не удалось войти');
+    TOKEN = body.data.token;
+    ME = body.data.user;
+    localStorage.setItem('pek_admin_token', TOKEN);
+    enterApp();
+  } catch (e) {
+    document.getElementById('loginError').textContent = e.message;
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('pek_admin_token');
+  TOKEN = ''; ME = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'block';
+}
+
+function enterApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('whoami').textContent = ME ? (ME.name + ' · ' + ME.role) : '';
+  loadAll().catch(e => toast(e.message, true));
+}
+
+function showTab(tab) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('active', s.id === 'tab-' + tab));
+}
+
+function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtDate(s) { return s ? s.substring(0, 10) : '—'; }
+
+// ---------- Нормативная база ----------
+
+async function loadRegulationVersions() {
+  const rows = await api('/versions');
+  const tbody = document.querySelector('#rv-table tbody');
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><code>${esc(r.code)}</code></td>
+      <td>${esc(r.title)}</td>
+      <td>${fmtDate(r.effectiveFrom)}</td>
+      <td>${fmtDate(r.effectiveTo)}</td>
+      <td>${esc(r.programTemplateVersion)}</td>
+      <td><span class="badge ${r.status === 'ACTIVE' ? 'active' : 'archived'}">${r.status}</span></td>
+      <td>${esc(r.updatedByName || '—')}</td>
+      <td>${r.updatedAt ? esc(r.updatedAt.substring(0, 16).replace('T', ' ')) : '—'}</td>
+      <td>
+        <button class="action primary" ${r.status === 'ACTIVE' ? 'disabled' : ''}
+          onclick="activateVersion(${r.id}, ${r.version}, '${esc(r.code)}')">Сделать действующей</button>
+        <button class="action danger" ${r.inUse || r.status === 'ACTIVE' ? 'disabled' : ''}
+          onclick="deleteVersion(${r.id}, ${r.version}, '${esc(r.code)}')">Удалить</button>
+      </td>
+    </tr>`).join('');
+  return rows;
+}
+
+async function activateVersion(id, version, code) {
+  if (!confirm(`Сделать версию "${code}" действующей? Текущая действующая версия будет архивирована. Уже созданные программы и отчёты не изменятся.`)) return;
+  try {
+    await api(`/versions/${id}/activate`, { method: 'POST', headers: { 'If-Match': String(version) } });
+    toast('Версия активирована');
+    await Promise.all([loadRegulationVersions(), loadDeadlineRuleOptions(), loadOfficialTables()]);
+  } catch (e) { toast(e.message, true); }
+}
+
+async function deleteVersion(id, version, code) {
+  if (!confirm(`Удалить версию "${code}" безвозвратно?`)) return;
+  try {
+    await api(`/versions/${id}`, { method: 'DELETE', headers: { 'If-Match': String(version) } });
+    toast('Версия удалена');
+    await loadRegulationVersions();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function createRegulationVersion() {
+  const payload = {
+    code: document.getElementById('rv-code').value.trim(),
+    title: document.getElementById('rv-title').value.trim(),
+    baseOrder: document.getElementById('rv-baseOrder').value.trim(),
+    effectiveFrom: document.getElementById('rv-effectiveFrom').value,
+    programTemplateVersion: document.getElementById('rv-programTemplateVersion').value.trim(),
+    reportTemplateVersion: document.getElementById('rv-reportTemplateVersion').value.trim()
+  };
+  document.getElementById('rv-error').textContent = '';
+  try {
+    await api('/versions', { method: 'POST', body: JSON.stringify(payload) });
+    toast('Версия создана (архивная — активируйте вручную)');
+    ['rv-code','rv-title','rv-baseOrder','rv-effectiveFrom','rv-programTemplateVersion','rv-reportTemplateVersion']
+      .forEach(id => document.getElementById(id).value = '');
+    await Promise.all([loadRegulationVersions(), loadDeadlineRuleOptions()]);
+  } catch (e) { document.getElementById('rv-error').textContent = e.message; }
+}
+
+// ---------- Типы отчётов ----------
+
+function renderReportTypes(catalogs) {
+  document.querySelector('#rt-table tbody').innerHTML =
+    catalogs.reportTypes.map(t => `<tr><td><code>${esc(t.code)}</code></td></tr>`).join('');
+}
+
+// ---------- Сроки сдачи ----------
+
+let regulationCodesCache = [];
+
+async function loadDeadlineRuleOptions() {
+  const versions = await api('/versions');
+  regulationCodesCache = versions.map(v => v.code);
+  const sel = document.getElementById('dr-regulationCode');
+  sel.innerHTML = regulationCodesCache.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const otSel = document.getElementById('ot-regulationCode');
+  otSel.innerHTML = regulationCodesCache.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+async function loadDeadlineRules() {
+  const rows = await api('/deadline-rules');
+  document.querySelector('#dr-table tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${esc(r.reportType)}</td>
+      <td><code>${esc(r.regulationCode)}</code></td>
+      <td>${r.monthsAfterPeriodEnd}</td>
+      <td class="muted">${esc(r.description || '')}</td>
+      <td>${r.active ? '<span class="badge active">да</span>' : '<span class="badge archived">нет</span>'}</td>
+      <td><button class="action" onclick="toggleDeadlineRule(${r.id}, ${r.version}, ${!r.active})">
+        ${r.active ? 'Отключить' : 'Включить'}</button></td>
+    </tr>`).join('');
+}
+
+async function toggleDeadlineRule(id, version, active) {
+  try {
+    await api(`/deadline-rules/${id}`, { method: 'PUT', headers: { 'If-Match': String(version) },
+      body: JSON.stringify({ active }) });
+    toast('Правило обновлено');
+    await loadDeadlineRules();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function createDeadlineRule() {
+  const payload = {
+    reportType: document.getElementById('dr-reportType').value,
+    regulationCode: document.getElementById('dr-regulationCode').value,
+    monthsAfterPeriodEnd: parseInt(document.getElementById('dr-months').value, 10),
+    description: document.getElementById('dr-description').value.trim()
+  };
+  document.getElementById('dr-error').textContent = '';
+  try {
+    await api('/deadline-rules', { method: 'POST', body: JSON.stringify(payload) });
+    toast('Правило создано');
+    document.getElementById('dr-months').value = '';
+    document.getElementById('dr-description').value = '';
+    await loadDeadlineRules();
+  } catch (e) { document.getElementById('dr-error').textContent = e.message; }
+}
+
+// ---------- Официальные таблицы ----------
+
+async function loadOfficialTables() {
+  const code = document.getElementById('ot-regulationCode').value || regulationCodesCache[0];
+  if (!code) return;
+  const rows = await api('/official-tables?regulationCode=' + encodeURIComponent(code));
+  document.querySelector('#ot-table tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.displayOrder}</td>
+      <td><code>${esc(r.tableType)}</code></td>
+      <td>${r.mandatory ? '<span class="badge mandatory">да</span>' : '<span class="badge optional">нет</span>'}</td>
+      <td>${r.applicable ? 'да' : 'нет'}</td>
+      <td>${esc(r.periodicity)}</td>
+      <td class="muted">${r.requiredFields.map(esc).join(', ')}</td>
+      <td><button class="action" onclick="toggleTableMandatory(${r.id}, ${r.version}, ${!r.mandatory})">
+        ${r.mandatory ? 'Сделать необязательной' : 'Сделать обязательной'}</button></td>
+    </tr>`).join('');
+}
+
+async function toggleTableMandatory(id, version, mandatory) {
+  if (!mandatory && !confirm('Сделать таблицу необязательной? Это влияет только на подсказки интерфейса — готовность (readiness) на backend продолжит проверять обязательные поля.')) return;
+  try {
+    await api(`/official-tables/${id}`, { method: 'PUT', headers: { 'If-Match': String(version) },
+      body: JSON.stringify({ mandatory }) });
+    toast('Настройка обновлена');
+    await loadOfficialTables();
+  } catch (e) { toast(e.message, true); }
+}
+
+// ---------- Справочники ----------
+
+function renderCatalogs(catalogs) {
+  const groups = [
+    ['Виды мониторинга (PekMonitoringType)', catalogs.monitoringTypes],
+    ['Типы контроля (PekControlType)', catalogs.controlTypes],
+    ['Официальные таблицы (PekOfficialTableType)', catalogs.officialTableTypes],
+    ['Типы отчётов (PekReportType)', catalogs.reportTypes]
+  ];
+  document.getElementById('catalogs-grid').innerHTML = groups.map(([title, items]) => `
+    <div class="card">
+      <strong>${title}</strong>
+      <table style="margin-top:8px"><tbody>
+        ${items.map(i => `<tr><td><code>${esc(i.code)}</code></td></tr>`).join('')}
+      </tbody></table>
+    </div>`).join('');
+}
+
+async function loadAll() {
+  const catalogs = await api('/reference-catalogs');
+  renderCatalogs(catalogs);
+  renderReportTypes(catalogs);
+  document.getElementById('dr-reportType').innerHTML =
+    catalogs.reportTypes.map(t => `<option value="${esc(t.code)}">${esc(t.code)}</option>`).join('');
+  await loadRegulationVersions();
+  await loadDeadlineRuleOptions();
+  await Promise.all([loadDeadlineRules(), loadOfficialTables()]);
+}
+
+if (TOKEN) {
+  fetch('/api/auth/me', { headers: authHeaders() })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(b => { ME = b.data; enterApp(); })
+    .catch(() => { document.getElementById('loginScreen').style.display = 'block'; });
+}
+</script>
+</body>
+</html>

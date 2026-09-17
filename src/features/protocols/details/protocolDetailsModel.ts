@@ -95,9 +95,9 @@ export const humanHistoryAction = (item: ProtocolHistoryItem) => {
 };
 
 export const resolveProtocolPrimaryAction = (protocol: Protocol, _role?: string): { key: ProtocolPrimaryActionKey; label: string } => {
-  if (hasProtocolAction(protocol, 'calculate')) return { key: 'calculate', label: 'Рассчитать' };
-  if (hasProtocolAction(protocol, 'checkNormatives')) return { key: 'checkNormatives', label: 'Проверить' };
   if (hasProtocolAction(protocol, 'sendToApproval')) return { key: 'ready', label: 'Отправить на утверждение' };
+  if (hasProtocolAction(protocol, 'checkNormatives')) return { key: 'checkNormatives', label: 'Проверить' };
+  if (hasProtocolAction(protocol, 'calculate')) return { key: 'calculate', label: 'Рассчитать' };
   if (hasProtocolAction(protocol, 'approve')) return { key: 'approve', label: 'Утвердить' };
   if (hasProtocolAction(protocol, 'sign')) return { key: 'sign', label: 'Подписать' };
   if (hasProtocolAction(protocol, 'publish')) return { key: 'publish', label: 'Опубликовать' };

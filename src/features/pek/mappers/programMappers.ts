@@ -137,3 +137,28 @@ export const mapProgramToForm = (program: PekProgram): PekProgramForm => {
     })),
   };
 };
+
+// PATCH responses may omit nullable snapshot fields. Preserve what the user
+// submitted so a successful save cannot immediately blank those inputs.
+export const mapSavedProgramToForm = (
+  program: PekProgram,
+  submitted: PekProgramForm,
+): PekProgramForm => ({
+  ...mapProgramToForm(program),
+  name: submitted.name,
+  description: submitted.description,
+  validFrom: submitted.validFrom,
+  validUntil: submitted.validUntil,
+  responsibleUserId: submitted.responsibleUserId,
+  facilityInformation: submitted.facilityInformation,
+  kato: submitted.kato,
+  bin: submitted.bin,
+  oked: submitted.oked,
+  environmentalCategory: submitted.environmentalCategory,
+  designCapacity: submitted.designCapacity,
+  designCapacityUnit: submitted.designCapacityUnit,
+  productionCharacteristics: submitted.productionCharacteristics,
+  monitoringScope: submitted.monitoringScope,
+  permitIds: submitted.permitIds,
+  readinessNotes: submitted.readinessNotes,
+});

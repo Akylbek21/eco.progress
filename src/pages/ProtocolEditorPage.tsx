@@ -587,7 +587,11 @@ const ProtocolEditorPage = () => {
       toast.error('Не удалось подписать протокол', 'Версия протокола не определена. Обновите данные');
       return;
     }
-    void preview();
+    if (hasProtocolAction(protocol, 'preview')) {
+      void preview();
+      return;
+    }
+    setSignOpen(true);
   };
 
   const ensureDraftProtocol = async (item: Protocol) => {

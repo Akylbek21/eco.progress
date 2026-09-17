@@ -3,6 +3,7 @@ import { Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTi
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { getUsers } from '../../../../services/adminUserService';
 import type {
   PekEmergencyProcedure,
   PekEmergencyProcedureRequest,
@@ -85,14 +86,20 @@ const StructuredSection = <T extends VersionedItem, TForm,>({ program, definitio
   </section>;
 };
 
-const AssigneeField = ({ value, onChange, options }: { value: number | null; onChange: (value: number | null) => void; options: Array<{ id: number; name: string }> }) => <TextField select label="Ответственный" value={value ?? ''} onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{options.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</TextField>;
+const AssigneeField = ({ value, onChange, options, loading = false, error = false }: { value: number | null; onChange: (value: number | null) => void; options: Array<{ id: number; name: string }>; loading?: boolean; error?: boolean }) => <TextField select label="Ответственный" value={value ?? ''} disabled={loading} error={error} helperText={loading ? 'Загрузка сотрудников…' : error ? 'Не удалось загрузить сотрудников' : !options.length ? 'Нет доступных сотрудников' : undefined} onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{options.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</TextField>;
 const TextSummary = ({ title, details }: { title: string; details: ReactNode }) => <><h3 className="font-black">{title}</h3><div className="mt-2 text-sm text-slate-600">{details}</div></>;
 const PekProgramStructuredSections = ({ program, section }: { program: PekProgram; section?: PekStructuredSectionKey }) => {
   const { user } = useAuth();
   const companyId = program.company?.id || 0;
   const assignees = useQuery({ queryKey: pekKeys.assignees(companyId, ['PEK_RESPONSIBLE'], user?.id), queryFn: ({ signal }) => pekApi.getAssignees(companyId, ['PEK_RESPONSIBLE'], signal), enabled: companyId > 0 });
   const companyStaff = useQuery({ queryKey: pekKeys.companyStaff(companyId, user?.id), queryFn: ({ signal }) => pekApi.getCompanyStaff(companyId, signal), enabled: companyId > 0 });
-  const users = mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data).map((item) => ({ id: Number(item.id), name: item.name }));
+  const systemUsers = useQuery({ queryKey: ['admin-users'], queryFn: getUsers, enabled: companyId > 0 });
+  const users = [...new Map([
+    ...mergeAssigneesWithCompanyStaff(assignees.data, companyStaff.data).map((item) => ({ id: Number(item.id), name: item.name })),
+    ...(systemUsers.data || [])
+      .filter((employee) => employee.role !== 'CLIENT' && employee.status.toLowerCase() === 'active')
+      .map((employee) => ({ id: Number(employee.id), name: employee.fullName?.trim() || employee.name || employee.email })),
+  ].map((employee) => [employee.id, employee])).values()];
 
   const inspection: SectionDefinition<PekInternalInspection, PekInternalInspectionRequest> = {
     key: 'internal-inspections', title: 'Внутренние проверки', description: 'План, факт, результаты и корректирующие действия.', addLabel: 'Добавить проверку',

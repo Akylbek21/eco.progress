@@ -38,6 +38,28 @@ describe('FE ↔ BE protocol button contract', () => {
     expect(resolveProtocolPrimaryAction(protocol)).toEqual({ key: 'calculate', label: 'Рассчитать' });
   });
 
+  it('prefers approval transition over recalculation after calculation is complete', () => {
+    const protocol = {
+      status: 'CALCULATED',
+      availableActions: normalizeProtocolAvailableActions({ calculate: true, sendToApproval: true }),
+    } as Protocol;
+    expect(resolveProtocolPrimaryAction(protocol)).toEqual({
+      key: 'ready',
+      label: 'Отправить на утверждение',
+    });
+  });
+
+  it('prefers approval transition over the non-transitioning normative check', () => {
+    const protocol = {
+      status: 'CALCULATED',
+      availableActions: normalizeProtocolAvailableActions({ checkNormatives: true, sendToApproval: true }),
+    } as Protocol;
+    expect(resolveProtocolPrimaryAction(protocol)).toEqual({
+      key: 'ready',
+      label: 'Отправить на утверждение',
+    });
+  });
+
   it('guards every document and row button with canonical availableActions', () => {
     const details = source('src/features/protocols/details/ProtocolDocumentsTab.tsx');
     const list = source('src/components/protocols/ProtocolList.tsx');
@@ -54,5 +76,11 @@ describe('FE ↔ BE protocol button contract', () => {
     const details = source('src/features/protocols/details/ProtocolDetailsView.tsx');
     expect(details.match(/onPublish\(\)/g)).toHaveLength(1);
     expect(details).not.toContain('actions.publish &&');
+  });
+
+  it('allows signing when preview is unavailable but backend permits sign', () => {
+    const editor = source('src/pages/ProtocolEditorPage.tsx');
+    expect(editor).toContain("if (hasProtocolAction(protocol, 'preview'))");
+    expect(editor).toMatch(/if \(hasProtocolAction\(protocol, 'preview'\)\)[\s\S]*?void preview\(\);[\s\S]*?return;[\s\S]*?setSignOpen\(true\);/);
   });
 });

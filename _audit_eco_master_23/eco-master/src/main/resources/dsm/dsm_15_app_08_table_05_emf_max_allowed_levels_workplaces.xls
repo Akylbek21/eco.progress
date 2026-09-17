@@ -1,0 +1,63 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table><tbody><tr><td rowspan="2"><p>
+Параметр</p>
+</td><td colspan="5"><p>
+Максимально допустимые уровни в диапазонах частот (МГц)</p>
+</td></tr><tr><td><p>
+&gt; 0,03-3,0</p>
+</td><td><p>
+&gt; 3,0-30,0</p>
+</td><td><p>
+&gt; 30,0-50,0</p>
+</td><td><p>
+&gt; 50,0-300,0</p>
+</td><td><p>
+&gt; 300,0-300000,0</p>
+</td></tr><tr><td><p>
+1</p>
+</td><td><p>
+2</p>
+</td><td><p>
+3</p>
+</td><td><p>
+4</p>
+</td><td><p>
+5</p>
+</td><td><p>
+6</p>
+</td></tr><tr><td><p>
+Е, В/м</p>
+</td><td><p>
+500</p>
+</td><td><p>
+300</p>
+</td><td><p>
+80</p>
+</td><td><p>
+80</p>
+</td><td><p>
+–</p>
+</td></tr><tr><td><p>
+Н, А/м</p>
+</td><td><p>
+50</p>
+</td><td><p>
+–</p>
+</td><td><p>
+3,0</p>
+</td><td><p>
+–</p>
+</td><td><p>
+–</p>
+</td></tr><tr><td><p>
+ППЭ, мкВт/см<sup>2</sup></p>
+</td><td><p>
+–</p>
+</td><td><p>
+–</p>
+</td><td><p>
+–</p>
+</td><td><p>
+–</p>
+</td><td><p>
+1000 5000*</p>
+</td></tr></tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

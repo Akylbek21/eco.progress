@@ -20,6 +20,7 @@ import {
   mapProgramAutosaveToRequest,
   mapProgramCreateFormToRequest,
   mapProgramEditFormToRequest,
+  mapSavedProgramToForm,
   mapProgramToForm,
 } from '../mappers/programMappers';
 import { mergeAssigneesWithCompanyStaff } from '../mappers/responseMappers';
@@ -352,9 +353,9 @@ const PekProgramCreatePage = () => {
       manualSavePendingRef.current = true;
       setAutosaveState('saving');
     },
-    onSuccess: async (saved) => {
+    onSuccess: async (saved, submitted) => {
       versionRef.current = saved.version;
-      const savedForm = mapProgramToForm(saved);
+      const savedForm = mapSavedProgramToForm(saved, submitted);
       lastAutosaveHash.current = JSON.stringify(mapProgramAutosaveToRequest(savedForm));
       reset(savedForm);
       await removePekDraft(draftKey).catch(() => undefined);

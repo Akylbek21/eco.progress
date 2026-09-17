@@ -1,0 +1,203 @@
+openapi: 3.1.0
+info:
+  title: EcoProgress PEK Programs & Reports API (readiness, creation-context, re-template, official submission)
+  version: 1.1.0
+  description: >
+    Hand-maintained contract for the PEK endpoints changed in this iteration (the project has no
+    springdoc generator; see also pek-settings-openapi.yaml). All responses use the ApiResponse
+    envelope {data, message, success, errors, code, fieldErrors}. Every mutation requires
+    If-Match = current optimistic-lock version of the resource.
+paths:
+  /api/pek/programs:
+    get:
+      summary: Paged program list
+      description: readinessPercent of every item equals GET /programs/{id}/readiness progressPercent (batch-evaluated per page).
+      responses:
+        '200':
+          description: Page of programs
+          content:
+            application/json:
+              example:
+                data:
+                  items:
+                    - { id: 42, status: DRAFT, readinessPercent: 33, regulationCode: PEK_RULES_250_2026_59, templateVersion: v2-2026, contentRevision: 0, availableActions: { edit: true, submitReview: false, retemplate: false } }
+                  page: 0
+                  size: 20
+                  totalElements: 1
+  /api/pek/programs/{id}:
+    get:
+      summary: Program detail (readinessPercent = readiness.progressPercent)
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200': { description: Program, content: { application/json: { schema: { $ref: '#/components/schemas/ProgramEnvelope' } } } }
+        '403': { description: Outside caller's company scope }
+  /api/pek/programs/{id}/readiness:
+    get:
+      summary: Canonical readiness (single source of the percentage)
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      responses:
+        '200':
+          description: Readiness
+          content:
+            application/json:
+              example:
+                data:
+                  ready: false
+                  progressPercent: 33
+                  blockingIssues:
+                    - { code: NO_INDICATORS, section: INDICATORS, severity: ERROR, message: Не добавлено ни одного контролируемого показателя, blocking: true }
+                  warnings:
+                    - { code: LEGACY_TEMPLATE, section: GENERAL, severity: WARNING, message: Программа использует устаревший шаблон - требуется актуализация, blocking: false }
+  /api/pek/programs/{id}/retemplate:
+    post:
+      summary: Re-template a DRAFT/RETURNED program onto PekRegulationVersionService.current()
+      description: >
+        Restamps regulationCode/regulationVersion/templateVersion, increments contentRevision, writes
+        audit RETEMPLATE. Never touches APPROVED/ACTIVE programs or existing reports. Offered via
+        availableActions.retemplate. Readiness afterwards lists the program's concrete blockers.
+      parameters: [ { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IfMatch' } ]
+      responses:
+        '200': { description: Updated program, content: { application/json: { schema: { $ref: '#/components/schemas/ProgramEnvelope' } } } }
+        '400': { description: VERSION_REQUIRED / missing If-Match }
+        '403': { description: No PEK_PROGRAM_EDIT or outside company scope }
+        '409': { description: PEK_VERSION_CONFLICT | PEK_PROGRAM_RETEMPLATE_NOT_ALLOWED (UNDER_REVIEW/APPROVED/ACTIVE/ARCHIVED) | PEK_PROGRAM_TEMPLATE_CURRENT }
+  /api/pek/reports/creation-context:
+    get:
+      summary: What POST /api/pek/reports would do for this company/object/period
+      parameters:
+        - { name: companyId, in: query, required: true, schema: { type: integer, format: int64 } }
+        - { name: objectId, in: query, required: true, schema: { type: integer, format: int64 } }
+        - { name: periodType, in: query, required: true, schema: { type: string, enum: [QUARTER, YEAR] } }
+        - { name: year, in: query, required: false, schema: { type: integer } }
+        - { name: quarter, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 4 } }
+        - { name: programId, in: query, required: false, description: Explicit choice when several ACTIVE programs exist, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: Context. Versions/deadline are null (never guessed) unless exactly one covering ACTIVE program is selected; the reason is in blockingReasons.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportCreationContextEnvelope' }
+              examples:
+                ready:
+                  value:
+                    data:
+                      company: { id: 14, name: ТОО "АЛЕАНА СЕРВИС", bin: "123456789012" }
+                      object: { id: 14, name: Основной объект - ТОО "АЛЕАНА СЕРВИС" }
+                      periodStart: "2026-07-01"
+                      periodEnd: "2026-09-30"
+                      submissionDueDate: "2026-11-01"
+                      regulationVersion: PEK_RULES_250_2026_59
+                      templateVersion: v2-2026
+                      programs: []
+                      selectedProgramId: 7
+                      duplicateReportId: null
+                      warnings: []
+                      blockingReasons: []
+                noActiveProgram:
+                  value:
+                    data:
+                      periodStart: "2026-07-01"
+                      periodEnd: "2026-09-30"
+                      submissionDueDate: null
+                      regulationVersion: null
+                      templateVersion: null
+                      programs: []
+                      selectedProgramId: null
+                      duplicateReportId: null
+                      warnings: []
+                      blockingReasons: [На объекте нет действующей программы ПЭК]
+        '403': { description: Company outside caller's scope }
+  /api/pek/reports/{reportId}/submit:
+    post:
+      summary: Official submission (SIGNED -> SUBMITTED) with filing requisites
+      description: >
+        Requires PEK_REPORT_SUBMIT (ADMIN, DIRECTOR, HEAD, ECOLOGIST), company scope, If-Match, status
+        SIGNED, the latest OFFICIAL document current (sourceContentRevision == report.contentRevision)
+        and a verified signature on exactly that document version. A body-less call is rejected.
+        Writes workflow history SUBMIT (no signature/CMS content). Details can later be corrected via
+        POST /api/pek/reports/{reportId}/submission.
+      parameters: [ { name: reportId, in: path, required: true, schema: { type: integer, format: int64 } }, { $ref: '#/components/parameters/IfMatch' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitReportRequest' }
+            example:
+              submittedAt: "2026-10-20T10:30:00+05:00"
+              registrationNumber: KZ-PEK-2026-00123
+              submissionMethod: ECO_PORTAL
+              confirmationFileId: "12345"
+              comment: Принято порталом
+      responses:
+        '200':
+          description: Report with saved submission record
+          content:
+            application/json:
+              example:
+                data:
+                  id: 101
+                  status: SUBMITTED
+                  submissionDueDate: "2026-11-01"
+                  submittedAt: "2026-10-20T10:30:00"
+                  submission:
+                    submissionMethod: ECO_PORTAL
+                    registrationNumber: KZ-PEK-2026-00123
+                    submissionComment: Принято порталом
+                    confirmationFileId: "12345"
+                    submittedAt: "2026-10-20T10:30:00"
+                    submittedBy: { id: 5, name: Иванов И.И. }
+                  availableActions: { submit: false, accept: true, reject: true }
+        '400': { description: PEK_SUBMISSION_DETAILS_REQUIRED | VALIDATION_ERROR (fieldErrors.submittedAt/registrationNumber/comment) | PEK_SUBMISSION_METHOD_INVALID | PEK_SUBMISSION_DATE_INVALID | PEK_REPORT_NO_OFFICIAL_DOCUMENT | PEK_SUBMISSION_FILE_FOREIGN | PEK_SUBMISSION_FILE_NOT_FOUND | missing If-Match }
+        '403': { description: No PEK_REPORT_SUBMIT or outside company scope }
+        '409': { description: PEK_VERSION_CONFLICT | PEK_REPORT_INVALID_TRANSITION (not SIGNED, repeated submit) | PEK_DOCUMENT_STALE | PEK_DOCUMENT_NOT_SIGNED }
+components:
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    IfMatch: { name: If-Match, in: header, required: true, description: Current resource version, schema: { type: integer, format: int64 } }
+  schemas:
+    ProgramEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id: { type: integer, format: int64 }
+            status: { type: string, enum: [DRAFT, UNDER_REVIEW, RETURNED, APPROVED, ACTIVE, ARCHIVED] }
+            readinessPercent: { type: integer, description: Same value as readiness.progressPercent }
+            version: { type: integer, format: int64 }
+            regulationVersion: { type: string, description: Citation of the edition }
+            regulationCode: { type: string, example: PEK_RULES_250_2026_59 }
+            templateVersion: { type: string, example: v2-2026 }
+            contentRevision: { type: integer, format: int64 }
+            availableActions:
+              type: object
+              additionalProperties: { type: boolean }
+              description: Includes view, edit, submit, submitReview, returnForRevision, approve, activate, archive, clone, uploadDocument, delete, retemplate
+    ReportCreationContextEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          required: [periodStart, periodEnd, programs, warnings, blockingReasons]
+          properties:
+            company: { type: [object, 'null'], properties: { id: { type: integer }, name: { type: string }, bin: { type: string } } }
+            object: { type: [object, 'null'], properties: { id: { type: integer }, name: { type: string } } }
+            periodStart: { type: [string, 'null'], format: date }
+            periodEnd: { type: [string, 'null'], format: date }
+            submissionDueDate: { type: [string, 'null'], format: date, description: PekSubmissionDeadlineService(reportType, regulation code of selected program, periodEnd) }
+            regulationVersion: { type: [string, 'null'], description: Regulation CODE of the selected ACTIVE program }
+            templateVersion: { type: [string, 'null'] }
+            programs: { type: array, items: { type: object } }
+            selectedProgramId: { type: [integer, 'null'], format: int64 }
+            duplicateReportId: { type: [integer, 'null'], format: int64 }
+            warnings: { type: array, items: { type: string } }
+            blockingReasons: { type: array, items: { type: string } }
+    SubmitReportRequest:
+      type: object
+      required: [submittedAt, submissionMethod]
+      properties:
+        submittedAt: { type: string, format: date-time, description: ISO-8601 with or without offset; not in the future, not before signing }
+        submissionMethod: { type: string, enum: [ECO_PORTAL, EGOV_PORTAL, EMAIL, PAPER, COURIER, OTHER] }
+        registrationNumber: { type: [string, 'null'], maxLength: 120, description: Required for ECO_PORTAL and EGOV_PORTAL }
+        confirmationFileId: { type: [string, 'null'], description: Id from POST /api/pek/reports/{reportId}/submission/file for THIS report }
+        comment: { type: [string, 'null'], maxLength: 2000, description: Required for OTHER }

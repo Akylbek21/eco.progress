@@ -1,0 +1,9 @@
+/mvnw text eol=lf
+*.cmd text eol=crlf
+
+# Разработка идёт с Windows, а выполняются эти файлы на Linux-сервере. С CRLF shell отвергает
+# скрипт целиком ("bad interpreter: /usr/bin/env bash^M"), а `. deploy/backup-mail.env` тихо
+# затягивает \r в конец каждого значения - пароль с невидимым символом и отказ авторизации SMTP.
+*.sh text eol=lf
+*.py text eol=lf
+*.env text eol=lf

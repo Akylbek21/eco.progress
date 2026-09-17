@@ -14,6 +14,7 @@ import {
   mapProgramAutosaveToRequest,
   mapProgramCreateFormToRequest,
   mapProgramEditFormToRequest,
+  mapSavedProgramToForm,
 } from '../src/features/pek/mappers/programMappers';
 import {
   getCreationBlockState,
@@ -256,6 +257,12 @@ describe('PEK backend contract', () => {
       facilityInformation: 'Facility', bin: '123456789012', designCapacity: '1200', designCapacityUnit: 'т/год',
       monitoringScope: 'Air and water', readinessNotes: 'Ready', permitIds: [41, 42],
     });
+
+    const partialPatchResponse = mapProgramResponse({
+      ...programResponse,
+      facilitySnapshot: { kato: '711', binSnapshot: '123456789012' },
+    });
+    expect(mapSavedProgramToForm(partialPatchResponse, extended).oked).toBe('23.51');
   });
 
   it('uploads a replacement permit file with scope and If-Match', async () => {
