@@ -261,8 +261,20 @@ describe('PEK backend contract', () => {
     const partialPatchResponse = mapProgramResponse({
       ...programResponse,
       facilitySnapshot: { kato: '711', binSnapshot: '123456789012' },
+      controlItems: undefined,
+      indicators: undefined,
+      measures: undefined,
     });
-    expect(mapSavedProgramToForm(partialPatchResponse, extended).oked).toBe('23.51');
+    const preserved = mapSavedProgramToForm(partialPatchResponse, extended);
+    expect(preserved).toMatchObject({
+      name: ' Program ', description: ' Description ', validFrom: '2026-01-01', validUntil: '2026-12-31',
+      responsibleUserId: 7, facilityInformation: 'Facility', kato: '711', bin: '123456789012', oked: '23.51',
+      environmentalCategory: 'II', designCapacity: '1200', productionCharacteristics: 'Dry process',
+      monitoringScope: 'Air and water', readinessNotes: 'Ready', permitIds: [41, 42],
+    });
+    expect(preserved.controlItems).toEqual(extended.controlItems);
+    expect(preserved.indicators).toEqual(extended.indicators);
+    expect(preserved.measures).toEqual(extended.measures);
   });
 
   it('uploads a replacement permit file with scope and If-Match', async () => {

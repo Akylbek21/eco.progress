@@ -143,22 +143,28 @@ export const mapProgramToForm = (program: PekProgram): PekProgramForm => {
 export const mapSavedProgramToForm = (
   program: PekProgram,
   submitted: PekProgramForm,
-): PekProgramForm => ({
-  ...mapProgramToForm(program),
-  name: submitted.name,
-  description: submitted.description,
-  validFrom: submitted.validFrom,
-  validUntil: submitted.validUntil,
-  responsibleUserId: submitted.responsibleUserId,
-  facilityInformation: submitted.facilityInformation,
-  kato: submitted.kato,
-  bin: submitted.bin,
-  oked: submitted.oked,
-  environmentalCategory: submitted.environmentalCategory,
-  designCapacity: submitted.designCapacity,
-  designCapacityUnit: submitted.designCapacityUnit,
-  productionCharacteristics: submitted.productionCharacteristics,
-  monitoringScope: submitted.monitoringScope,
-  permitIds: submitted.permitIds,
-  readinessNotes: submitted.readinessNotes,
-});
+): PekProgramForm => {
+  const mapped = mapProgramToForm(program);
+  return {
+    ...mapped,
+    name: submitted.name,
+    description: submitted.description,
+    validFrom: submitted.validFrom,
+    validUntil: submitted.validUntil,
+    responsibleUserId: submitted.responsibleUserId,
+    facilityInformation: submitted.facilityInformation,
+    kato: submitted.kato,
+    bin: submitted.bin,
+    oked: submitted.oked,
+    environmentalCategory: submitted.environmentalCategory,
+    designCapacity: submitted.designCapacity,
+    designCapacityUnit: submitted.designCapacityUnit,
+    productionCharacteristics: submitted.productionCharacteristics,
+    monitoringScope: submitted.monitoringScope,
+    permitIds: submitted.permitIds,
+    readinessNotes: submitted.readinessNotes,
+    controlItems: mapped.controlItems.length || !submitted.controlItems.length ? mapped.controlItems : submitted.controlItems,
+    indicators: mapped.indicators.length || !submitted.indicators.length ? mapped.indicators : submitted.indicators,
+    measures: mapped.measures.length || !submitted.measures.length ? mapped.measures : submitted.measures,
+  };
+};
