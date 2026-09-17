@@ -14,6 +14,7 @@ const messages: Record<string, string> = {
   PEK_REPORT_DOCUMENT_LOCKED: 'Документы отчёта нельзя формировать после подписания или архивации отчёта.',
   PEK_MONITORING_EMPTY: 'В программе ПЭК нет включённых направлений мониторинга. Добавьте хотя бы одно направление в программу.',
   PEK_PACKAGE_DUPLICATE_ENTRY: 'В комплекте ПЭК обнаружены файлы с одинаковыми именами. Проверьте настройки направлений мониторинга.',
+  PEK_PACKAGE_NOT_READY: 'Комплект ПЭК не готов. Исправьте перечисленные замечания и повторите формирование.',
   PEK_REPORT_DUPLICATE: 'Отчёт за этот период уже существует',
   PEK_REPORT_ALREADY_EXISTS: 'Отчёт за этот период уже существует',
   PEK_ACTIVE_PROGRAM_MISSING: 'Для выбранного объекта нет действующей программы ПЭК',
@@ -99,7 +100,11 @@ export const mapPekError = (error: unknown): PekUiError => {
     traceId: parsed.requestCode || parsed.traceId || parsed.requestId || String(details.correlationId || ''),
     resourceId: parsed.resourceId || (details.resourceId ? String(details.resourceId) : undefined),
     details: import.meta.env.DEV ? details.details : undefined,
-    issues: Array.isArray(details.issues) ? details.issues as PekValidationIssue[] : [],
+    issues: Array.isArray(details.issues)
+      ? details.issues as PekValidationIssue[]
+      : Array.isArray(details.errors)
+        ? details.errors as PekValidationIssue[]
+        : [],
     missingFields: missingFields.map((item) => typeof item === 'string' ? item : String((item as Record<string, unknown>).label ?? (item as Record<string, unknown>).field ?? (item as Record<string, unknown>).message ?? 'обязательные данные')),
   };
 };

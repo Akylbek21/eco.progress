@@ -17,7 +17,12 @@ export type PekReportStatus =
   | 'REJECTED'
   | 'SIGNED'
   | 'ARCHIVED';
-export type PekReportDocumentKind = 'OFFICIAL' | 'INTERNAL_ANALYTICAL';
+export type PekReportDocumentKind =
+  | 'OFFICIAL'
+  | 'INTERNAL_ANALYTICAL'
+  | 'EXPLANATORY_NOTE'
+  | 'ENVIRONMENTAL_MEASURES'
+  | 'EMISSIONS_XLSX';
 export type PekReportDocumentFormat = 'docx' | 'pdf' | 'xlsx';
 export type PekPeriodType = 'QUARTER' | 'YEAR';
 export type PekReportType = 'PEK_QUARTERLY' | 'PEK_TABLES_7_12_ANNUAL' | 'PEM_CASPIAN_ANNUAL';
@@ -602,6 +607,41 @@ export interface PekReportPackage {
   downloadAvailable: boolean;
   availableActions: Record<string, boolean>;
   version: number;
+  missingDocuments: PekPackageIssue[];
+  staleDocuments: PekPackageIssue[];
+  readiness: PekPackageIssue[];
+}
+export type PekPackageFileStatus = 'READY' | 'MISSING' | 'STALE';
+export interface PekPackageIssue {
+  code: string;
+  section: string;
+  entityId: number | null;
+  field: string | null;
+  message: string;
+}
+export interface PekPackageFile {
+  key: string;
+  path: string;
+  title: string;
+  documentType: string;
+  format: PekReportDocumentFormat | Uppercase<PekReportDocumentFormat>;
+  required: boolean;
+  status: PekPackageFileStatus;
+  versionId: number | null;
+  documentVersion: number | null;
+  sourceContentRevision: number | null;
+  generatedAt: string | null;
+  generatedBy: number | null;
+}
+export interface PekPackagePreflight {
+  reportId: number;
+  currentContentRevision: number;
+  ready: boolean;
+  files: PekPackageFile[];
+  missingDocuments: PekPackageIssue[];
+  staleDocuments: PekPackageIssue[];
+  issues: PekPackageIssue[];
+  availableActions: Record<string, boolean>;
 }
 export type PekResultValue = {
   numericValue?: number | null;

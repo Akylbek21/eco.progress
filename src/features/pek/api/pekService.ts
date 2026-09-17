@@ -42,6 +42,7 @@ import type {
   PekReportSignature,
   PekReportHistoryEntry,
   PekReportPackage,
+  PekPackagePreflight,
   PekScopeCompany,
   PekScopeObject,
   PekTransitionExceedanceRequest,
@@ -72,7 +73,7 @@ import {
   mapReportResponse,
 } from '../mappers/responseMappers';
 import { mapProgramMonitoring } from '../mappers/monitoringMapper';
-import { mapReportPackage } from '../mappers/packageMapper';
+import { mapPackagePreflight, mapReportPackage } from '../mappers/packageMapper';
 
 const cleanParams = (input: Record<string, unknown>) => Object.fromEntries(
   Object.entries(input).filter(([, value]) => value !== '' && value !== undefined && value !== null),
@@ -105,13 +106,16 @@ const reportAction = async (
 
 const reportDocumentPath = (id: number) => `/pek/reports/${id}/document`;
 
-const backendDocumentType = (kind: PekReportDocumentKind): 'OFFICIAL' | 'INTERNAL' =>
-  kind === 'OFFICIAL' ? 'OFFICIAL' : 'INTERNAL';
+const backendDocumentType = (kind: PekReportDocumentKind) =>
+  kind === 'INTERNAL_ANALYTICAL' ? 'INTERNAL' : kind;
 
 const frontendDocumentKind = (value: unknown, fallback: PekReportDocumentKind): PekReportDocumentKind => {
   const normalized = String(value ?? '').trim().toUpperCase();
   if (normalized === 'OFFICIAL') return 'OFFICIAL';
   if (normalized === 'INTERNAL' || normalized === 'INTERNAL_ANALYTICAL') return 'INTERNAL_ANALYTICAL';
+  if (normalized === 'EXPLANATORY_NOTE') return 'EXPLANATORY_NOTE';
+  if (normalized === 'ENVIRONMENTAL_MEASURES') return 'ENVIRONMENTAL_MEASURES';
+  if (normalized === 'EMISSIONS_XLSX') return 'EMISSIONS_XLSX';
   return fallback;
 };
 
@@ -131,7 +135,7 @@ const mapDocumentVersion = (value: unknown, kind: PekReportDocumentKind): PekDoc
     stale: source.stale === true,
     hasDocx: source.hasDocx === true,
     hasPdf: source.hasPdf === true,
-    hasXlsx: false,
+    hasXlsx: source.hasXlsx === true,
     sha256: source.sha256 == null ? undefined : String(source.sha256),
   };
 };
@@ -355,9 +359,16 @@ export const pekApi = {
     api.post(`/pek/reports/${id}/reject`, { rejectionReason }, pekMutationOptions(version)).then(() => get<unknown>(`/pek/reports/${id}`)).then(mapReportResponse),
   archiveReport: (id: number, version: number) => reportAction(id, 'archive', version),
   generateReportDocument: async (id: number, kind: PekReportDocumentKind, format: PekReportDocumentFormat, version: number) => {
-    if (format === 'xlsx') throw new Error('Backend ПЭК не поддерживает формирование XLSX.');
-    const target = kind === 'OFFICIAL' ? `generate-official-${format}` : `generate-internal-${format}`;
-    return mapDocumentVersion((await api.post(`${reportDocumentPath(id)}/${target}`, {}, pekDocumentMutationOptions(version))).data, kind);
+    if (kind === 'OFFICIAL' || kind === 'INTERNAL_ANALYTICAL') {
+      if (format === 'xlsx') throw new Error('Для этого документа формат XLSX не поддерживается.');
+      const target = kind === 'OFFICIAL' ? `generate-official-${format}` : `generate-internal-${format}`;
+      return mapDocumentVersion((await api.post(`${reportDocumentPath(id)}/${target}`, {}, pekDocumentMutationOptions(version))).data, kind);
+    }
+    const target = kind === 'EMISSIONS_XLSX' ? 'generate-xlsx' : `generate-${format}`;
+    return mapDocumentVersion((await api.post(`${reportDocumentPath(id)}/${target}`, {}, {
+      ...pekDocumentMutationOptions(version),
+      params: kind === 'EMISSIONS_XLSX' ? undefined : { documentType: backendDocumentType(kind) },
+    })).data, kind);
   },
   getReportDocumentVersions: async (id: number, kind: PekReportDocumentKind, signal?: AbortSignal) =>
     (await get<unknown[]>(`${reportDocumentPath(id)}/versions`, { documentType: backendDocumentType(kind) }, signal))
@@ -440,6 +451,8 @@ export const pekApi = {
     const { version, ...payload } = body;
     return unwrapPekData<PekCorrectiveAction>((await api.post(`/pek/exceedances/${exceedanceId}/corrective-actions/${actionId}/transition`, payload, pekMutationOptions(version))).data);
   },
+  getReportPackagePreflight: async (id: number, signal?: AbortSignal): Promise<PekPackagePreflight> =>
+    mapPackagePreflight((await api.get(`/pek/reports/${id}/package/preflight`, { signal })).data),
   getCorrectiveActions: (exceedanceId: number, signal?: AbortSignal) =>
     get<PekCorrectiveAction[]>(`/pek/exceedances/${exceedanceId}/corrective-actions`, {}, signal),
   getProgramProtocols: (programId: number, signal?: AbortSignal) =>

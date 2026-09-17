@@ -31,6 +31,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 const SEARCH_PAGE_SIZE = 50;
 const protocolTypeLabels: Record<ProtocolTemplateId, string> = {
   ambient_air: 'Атмосферный воздух',
+  industrial_emissions: 'Промышленные выбросы',
   workplace_air: 'Воздух рабочей зоны',
   soil: 'Почва',
   microclimate: 'Микроклимат',
@@ -41,6 +42,7 @@ const protocolTypeLabels: Record<ProtocolTemplateId, string> = {
 };
 const relatedSectionLabels: Record<ProtocolTemplateId, string> = {
   ambient_air: 'Атмосферному воздуху',
+  industrial_emissions: 'Промышленным выбросам',
   workplace_air: 'Воздуху рабочей зоны',
   soil: 'Почве',
   microclimate: 'Микроклимату',

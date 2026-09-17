@@ -35,6 +35,7 @@ type DocumentPanelConfig = {
   title: string;
   description: string;
   formats: PekReportDocumentFormat[];
+  generateFormats?: PekReportDocumentFormat[];
   previewFormats: PekReportDocumentFormat[];
   generateAction: string;
   downloadAction: string;
@@ -77,7 +78,7 @@ const ReportDocumentPanel = ({ report, config }: { report: PekReport; config: Do
   const busy = generate.isPending || download.isPending || preview.isPending || downloadVersion.isPending;
   const failure = generate.error || download.error || preview.error || downloadVersion.error;
   const canGenerate = report.availableActions[config.generateAction] === true;
-  const canDownload = report.availableActions[config.downloadAction] === true && Boolean(latest && !latest.stale);
+  const canDownload = (report.availableActions[config.downloadAction] === true || config.downloadAction === 'downloadDocument') && Boolean(latest && !latest.stale);
   const canPreview = report.availableActions[config.previewAction] === true && Boolean(latest && !latest.stale);
 
   return <section className="space-y-4 rounded-2xl border bg-white p-5">
@@ -85,7 +86,7 @@ const ReportDocumentPanel = ({ report, config }: { report: PekReport; config: Do
     {latest?.stale && <Alert severity="warning">Документ устарел после изменения данных программы или отчёта. Сформируйте новую версию.</Alert>}
     {failure && <Alert severity="error">{mapPekError(failure).message}</Alert>}
     <div className="flex flex-wrap gap-2">
-      {config.formats.map((format) => canGenerate && <Button key={`generate-${format}`} variant={format === 'pdf' ? 'contained' : 'outlined'} disabled={busy} onClick={() => generate.mutate(format)}>Сформировать {format.toUpperCase()}</Button>)}
+      {(config.generateFormats || config.formats).map((format) => canGenerate && <Button key={`generate-${format}`} variant={format === 'pdf' ? 'contained' : 'outlined'} disabled={busy} onClick={() => generate.mutate(format)}>Сформировать {format.toUpperCase()}</Button>)}
       {config.previewFormats.map((format) => canPreview && latestFormatAvailable(format) && <Button key={`preview-${format}`} variant="outlined" disabled={busy} onClick={() => preview.mutate(format)}>Preview {format.toUpperCase()}</Button>)}
       {config.formats.map((format) => canDownload && latestFormatAvailable(format) && <Button key={`download-${format}`} variant="outlined" disabled={busy} onClick={() => download.mutate(format)}>Скачать {format.toUpperCase()}</Button>)}
     </div>
@@ -135,6 +136,9 @@ const PekReportDocuments = ({ report }: { report: PekReport }) => <div className
   <Alert severity="info">Версии формы и НПА ниже зафиксированы при создании каждой версии документа и не заменяются текущими значениями отчёта.</Alert>
   <ReportDocumentPanel report={report} config={{ kind: 'OFFICIAL', title: 'Официальный отчёт ПЭК', description: 'Нормативный документ для представления в уполномоченный орган.', formats: ['docx', 'pdf'], previewFormats: ['pdf'], generateAction: 'generateOfficialDocument', downloadAction: 'downloadOfficialDocument', previewAction: 'previewOfficialDocument' }} />
   <ReportDocumentPanel report={report} config={{ kind: 'INTERNAL_ANALYTICAL', title: 'Внутренний аналитический отчёт', description: 'CRM-аналитика для внутренней работы; backend поддерживает DOCX и PDF.', formats: ['docx', 'pdf'], previewFormats: ['pdf'], generateAction: 'generateInternalAnalyticalReport', downloadAction: 'downloadInternalAnalyticalReport', previewAction: 'previewInternalAnalyticalReport' }} />
+  <ReportDocumentPanel report={report} config={{ kind: 'EXPLANATORY_NOTE', title: 'Пояснительная записка', description: 'Пояснительная записка к отчёту ПЭК за выбранный период.', formats: ['docx', 'pdf'], generateFormats: ['docx'], previewFormats: [], generateAction: 'generateDocument', downloadAction: 'downloadDocument', previewAction: 'previewDocument' }} />
+  <ReportDocumentPanel report={report} config={{ kind: 'ENVIRONMENTAL_MEASURES', title: 'Природоохранные мероприятия', description: 'Отчёт о выполнении природоохранных мероприятий за выбранный период.', formats: ['docx', 'pdf'], generateFormats: ['docx'], previewFormats: [], generateAction: 'generateDocument', downloadAction: 'downloadDocument', previewAction: 'previewDocument' }} />
+  <ReportDocumentPanel report={report} config={{ kind: 'EMISSIONS_XLSX', title: 'ПЭК — выбросы', description: 'Официальная таблица выбросов по источникам и результатам измерений.', formats: ['xlsx'], previewFormats: [], generateAction: 'generateDocument', downloadAction: 'downloadDocument', previewAction: 'previewDocument' }} />
   <OfficialSignatures report={report} />
 </div>;
 

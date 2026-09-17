@@ -237,4 +237,4 @@ export const normalizeProtocolWizardForm = (value?: unknown): ProtocolWizardForm
   } as ProtocolWizardForm;
 };
 
-export const CHEMICAL_TYPES = new Set<ProtocolTemplateId>(['ambient_air', 'workplace_air', 'soil', 'water']);
+export const CHEMICAL_TYPES = new Set<ProtocolTemplateId>(['ambient_air', 'industrial_emissions', 'workplace_air', 'soil', 'water']);

@@ -12,7 +12,7 @@ export interface ProtocolValidationIssue {
 
 const text = (value: unknown) => String(value ?? '').trim();
 const hasValue = (value: unknown) => value !== null && value !== undefined && text(value) !== '';
-const chemicalTemplates = new Set(['ambient_air', 'workplace_air', 'soil', 'water']);
+const chemicalTemplates = new Set(['ambient_air', 'industrial_emissions', 'workplace_air', 'soil', 'water']);
 const issue = (code: string, message: string, field: string, step: number, severity: ProtocolValidationIssue['severity'] = 'ERROR', resultClientRowId?: string): ProtocolValidationIssue => ({ code, message, field, step, severity, resultClientRowId });
 const validDate = (value: unknown) => {
   const normalized = text(value);

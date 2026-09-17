@@ -160,7 +160,7 @@ export function mapMeasurementToRequest(
     );
   }
 
-  const chemical = ['ambient_air', 'workplace_air', 'soil', 'water'].includes(form.templateId);
+  const chemical = ['ambient_air', 'industrial_emissions', 'workplace_air', 'soil', 'water'].includes(form.templateId);
   const pollutantCode = chemical ? normalizeNullableText(row.pollutantCode) : null;
   const factorType = chemical ? null : normalizeNullableText(row.factorType);
   const factorCode = chemical ? null : normalizeNullableText(row.factorCode);

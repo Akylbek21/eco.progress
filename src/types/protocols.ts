@@ -42,6 +42,7 @@ export type ProtocolResultValue = string | number | null | undefined | Array<str
 
 export type ProtocolTemplateId =
   | 'ambient_air'
+  | 'industrial_emissions'
   | 'workplace_air'
   | 'soil'
   | 'microclimate'
@@ -51,7 +52,6 @@ export type ProtocolTemplateId =
   | 'uv_emf_laser';
 
 export type LegacyProtocolTemplateId =
-  | 'industrial_emissions'
   | 'water_wastewater'
   | 'physical_factors'
   | 'food_products'

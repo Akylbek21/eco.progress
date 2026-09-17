@@ -12,6 +12,7 @@ export interface ProtocolTemplateConfig {
 
 export const PROTOCOL_TEMPLATES: Record<ProtocolTemplateId, ProtocolTemplateConfig> = {
   ambient_air: { id: 'ambient_air', label: 'Атмосферный воздух', requiresSample: true, requiresEnvironment: true, requiresMeasurementPlace: true, requiresDevice: true, resultColumns: ['indicator', 'unit', 'normative', 'result', 'measurementDeviceId'] },
+  industrial_emissions: { id: 'industrial_emissions', label: 'Промышленные выбросы', requiresSample: false, requiresEnvironment: true, requiresMeasurementPlace: true, requiresDevice: true, resultColumns: ['measurementPlace', 'indicator', 'unit', 'normative', 'result', 'measurementDeviceId'] },
   workplace_air: { id: 'workplace_air', label: 'Воздух рабочей зоны', requiresSample: true, requiresEnvironment: true, requiresMeasurementPlace: true, requiresDevice: true, resultColumns: ['indicator', 'unit', 'normative', 'result', 'measurementDeviceId'] },
   soil: { id: 'soil', label: 'Почва', requiresSample: true, requiresEnvironment: true, requiresMeasurementPlace: true, requiresDevice: true, resultColumns: ['sampleNumber', 'samplingPlace', 'samplingDepth', 'indicator', 'unit', 'normative', 'result', 'measurementDeviceId'] },
   microclimate: { id: 'microclimate', label: 'Микроклимат', requiresSample: false, requiresEnvironment: true, requiresMeasurementPlace: true, requiresDevice: true, resultColumns: ['measurementPlace', 'indicator', 'unit', 'normative', 'result', 'measurementDeviceId'] },

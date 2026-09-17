@@ -12,7 +12,7 @@ import { mapWizardResultToDraftRequest, mapWizardToCreateDraft } from '../src/fe
 describe('protocol domain contract', () => {
   it('exposes all backend-supported templates including uv/emf/laser', () => {
     expect(Object.keys(PROTOCOL_TEMPLATES)).toEqual([
-      'ambient_air', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water', 'uv_emf_laser',
+      'ambient_air', 'industrial_emissions', 'workplace_air', 'soil', 'microclimate', 'lighting', 'noise_vibration', 'water', 'uv_emf_laser',
     ]);
     expect(isProtocolTemplateId('physical_factors')).toBe(false);
   });

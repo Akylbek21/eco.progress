@@ -4,6 +4,7 @@ export type FrontendProtocolType = ProtocolTemplateId;
 
 const supportedTypes = new Set<FrontendProtocolType>([
   'ambient_air',
+  'industrial_emissions',
   'workplace_air',
   'soil',
   'water',

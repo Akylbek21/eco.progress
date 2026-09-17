@@ -31,11 +31,13 @@ describe('PEK package regressions', () => {
   });
   it('renders first generation for the action returned by the archived backend', async () => {
     vi.spyOn(pekApi, 'getReportPackage').mockResolvedValue(null);
+    vi.spyOn(pekApi, 'getReportPackagePreflight').mockResolvedValue({ reportId: 9, currentContentRevision: 1, ready: true, files: [], missingDocuments: [], staleDocuments: [], issues: [], availableActions: { generatePackage: true } });
     mount(<PekReportPackageCard report={report({ generateDocument: true })} />);
     expect((await screen.findByRole('button', { name: 'Сформировать комплект ПЭК' }) as HTMLButtonElement).disabled).toBe(false);
   });
   it('allows regeneration when the previous package still carries missing fields', async () => {
-    vi.spyOn(pekApi, 'getReportPackage').mockResolvedValue({ id: 2, reportId: 9, documentVersion: 1, sourceContentRevision: 1, files: [], missingFields: ['protocols[1].pdf'], generatedAt: '', generatedBy: 7, downloadAvailable: true, availableActions: { generatePackage: true, downloadPackage: true }, version: 0 });
+    vi.spyOn(pekApi, 'getReportPackage').mockResolvedValue({ id: 2, reportId: 9, documentVersion: 1, sourceContentRevision: 1, files: [], missingFields: ['protocols[1].pdf'], generatedAt: '', generatedBy: 7, downloadAvailable: true, availableActions: { generatePackage: true, downloadPackage: true }, version: 0, missingDocuments: [], staleDocuments: [], readiness: [] });
+    vi.spyOn(pekApi, 'getReportPackagePreflight').mockResolvedValue({ reportId: 9, currentContentRevision: 1, ready: true, files: [], missingDocuments: [], staleDocuments: [], issues: [], availableActions: { generatePackage: true } });
     mount(<PekReportPackageCard report={report({ generateDocument: true })} />);
     expect((await screen.findByRole('button', { name: 'Сформировать комплект ПЭК' }) as HTMLButtonElement).disabled).toBe(false);
   });
