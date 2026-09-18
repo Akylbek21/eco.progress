@@ -6,6 +6,7 @@ export const publicRouteLoaders = {
   about: () => import('../pages/AboutPage'),
   contacts: () => import('../pages/ContactsPage'),
   login: () => import('../pages/LoginPage'),
+  digitalPek: () => import('../pages/DigitalPekPage'),
 } as const;
 
 const routeLoaderByPath = {
@@ -16,6 +17,7 @@ const routeLoaderByPath = {
   '/about': publicRouteLoaders.about,
   '/contacts': publicRouteLoaders.contacts,
   '/login': publicRouteLoaders.login,
+  '/pek-system': publicRouteLoaders.digitalPek,
 } as const;
 
 const started = new Set<string>();

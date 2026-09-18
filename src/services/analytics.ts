@@ -12,6 +12,8 @@ export type AnalyticsEventName =
   | 'content_view' | 'article_view' | 'regional_page_view' | 'cta_click'
   | 'related_service_click' | 'related_article_click' | 'document_view' | 'document_download'
   | 'table_of_contents_click' | 'scroll_depth'
+  | 'digital_pek_system_click' | 'digital_pek_order_click' | 'digital_pek_consultation_click'
+  | 'digital_pek_screenshot_view' | 'digital_pek_to_service_click' | 'digital_pek_form_submit'
   | 'content_cache_hit' | 'content_cache_miss' | 'content_fallback_usage';
 
 export interface LeadAttribution extends LeadContentAttribution {

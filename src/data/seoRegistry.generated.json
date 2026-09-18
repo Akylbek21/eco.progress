@@ -75,7 +75,7 @@
         "url": "https://ecoprogress.kz",
         "name": "Экологические услуги и лабораторные исследования для бизнеса в Казахстане",
         "description": "Экологические услуги и лабораторные исследования для предприятий Казахстана: проектирование, ПЭК, отходы, разрешения и сопровождение.",
-        "dateModified": "2026-09-08",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -84,7 +84,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-08"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/services",
@@ -553,6 +553,97 @@
     "priority": 0.8,
     "changeFrequency": "monthly",
     "lastModified": "2026-08-27"
+  },
+  {
+    "path": "/pek-system",
+    "locale": "ru",
+    "alternates": [],
+    "title": "Цифровая система ПЭК для предприятий | EcoProgress",
+    "description": "Программа ПЭК, отчёты, лабораторные протоколы, сроки и экологические документы в одном цифровом кабинете EcoProgress.",
+    "h1": "Цифровой кабинет ПЭК для предприятий",
+    "canonical": "https://ecoprogress.kz/pek-system",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Цифровая система ПЭК для предприятий | EcoProgress",
+    "ogDescription": "Программа ПЭК, отчёты, лабораторные протоколы, сроки и экологические документы в одном цифровом кабинете EcoProgress.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "мкр Восток, 66",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "hasMap": "https://2gis.kz/shymkent/geo/22659371323797193",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/pek-system#webpage",
+        "url": "https://ecoprogress.kz/pek-system",
+        "name": "Цифровой кабинет ПЭК для предприятий",
+        "description": "Программа ПЭК, отчёты, лабораторные протоколы, сроки и экологические документы в одном цифровом кабинете EcoProgress.",
+        "dateModified": "2026-09-18",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/pek-system#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Цифровой кабинет ПЭК для предприятий",
+            "item": "https://ecoprogress.kz/pek-system"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.8,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/about",

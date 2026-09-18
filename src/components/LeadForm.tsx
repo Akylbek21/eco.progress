@@ -121,6 +121,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
         ctaId,
       };
       await createLead({ name: leadName || 'Заявка с сайта', phone, city, serviceType, comment: enrichedComment, source, attribution });
+      if (source === 'digital_pek_page') trackEvent('digital_pek_form_submit', { form_id: formId, service_slug: serviceSlug });
       trackContentEvent({ eventName: 'form_submit', pageType: attribution.sourceType || 'UNKNOWN', contentSlug: attribution.sourceSlug, serviceId: attribution.serviceId, serviceSlug: attribution.serviceSlug, ctaId, position: formId });
       setSent(true);
       toast.success(isKk ? 'Өтінім қабылданды' : 'Заявка принята', isKk ? 'Маман өтінімді алды және сізбен байланысады.' : 'Специалист получил запрос и свяжется с вами.');

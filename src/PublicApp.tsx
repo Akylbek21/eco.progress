@@ -7,6 +7,7 @@ import PublicLayout from './layouts/PublicLayout';
 import { publicRouteLoaders } from './utils/publicRoutePreload';
 
 const HomePage = lazy(publicRouteLoaders.home);
+const DigitalPekPage = lazy(() => import('./pages/DigitalPekPage'));
 const AboutPage = lazy(publicRouteLoaders.about);
 const ServicesPage = lazy(publicRouteLoaders.services);
 const SeoLandingPage = lazy(() => import('./pages/SeoLandingPage'));
@@ -31,6 +32,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => <PublicLayo
 const PublicRoutes = () => (
   <Routes>
             <Route path="/" element={<PublicRoute><HomePage /></PublicRoute>} />
+            <Route path="/pek-system" element={<PublicRoute><DigitalPekPage /></PublicRoute>} />
             <Route path="/about" element={<PublicRoute><AboutPage /></PublicRoute>} />
             <Route path="/services" element={<PublicRoute><ServicesPage /></PublicRoute>} />
             <Route path="/services/:id" element={<PublicRoute><ServiceRoutePage /></PublicRoute>} />

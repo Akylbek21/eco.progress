@@ -10,6 +10,7 @@ import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company } from '../config/company';
 import { trackEvent } from '../services/analytics';
 import { buildCorePageEntities } from '../seo/entityBuilders';
+import DigitalPekPromo from '../components/pek/DigitalPekPromo';
 
 const ServiceSelector = lazy(() => import('../components/ServiceSelector'));
 const HomeCaseStudies = lazy(() => import('../components/home/HomeCaseStudies'));
@@ -106,6 +107,7 @@ const HomePage = () => (
     </section>
 
     <DeferredSection minHeight={560}><Suspense fallback={null}><HomeTrustSections /></Suspense></DeferredSection>
+    <DigitalPekPromo />
     <DeferredSection minHeight={420}><Suspense fallback={null}><HomeCaseStudies /></Suspense></DeferredSection>
     <Suspense fallback={null}><ServiceSelector /></Suspense>
 

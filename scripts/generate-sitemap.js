@@ -40,6 +40,7 @@ const pageSource = (routePath) => {
     '/about': 'AboutPage.tsx', '/contacts': 'ContactsPage.tsx', '/employees': 'EmployeesPage.tsx', '/experts': 'EmployeesPage.tsx',
     '/faq': 'FaqPage.tsx', '/news': 'NewsPage.tsx', '/partners': 'PartnersPage.tsx',
     '/regions': 'RegionsPage.tsx', '/services': 'ServicesPage.tsx', '/tariffs': 'TariffsPage.tsx',
+    '/pek-system': 'DigitalPekPage.tsx',
   };
   return names[routePath] ? `src/pages/${names[routePath]}` : routePath.startsWith('/services/') ? 'src/content/serviceCatalog.ts' : 'scripts/seo-data.mjs';
 };

@@ -19,6 +19,7 @@ import { Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import LeadForm from '../components/LeadForm';
 import SEO from '../components/SEO';
+import { DigitalPekServiceBanner } from '../components/pek/DigitalPekPromo';
 import WhatsAppButton from '../components/WhatsAppButton';
 import ResponsiveImage from '../components/ui/ResponsiveImage';
 import { company } from '../config/company';
@@ -194,6 +195,7 @@ const EcologicalSupportPage = () => (
         </div>
       </section>
 
+      <DigitalPekServiceBanner placement="service_ecological_support" />
       <section className="bg-eco-50 px-4 py-16 sm:px-8 sm:py-20"><div className="mx-auto max-w-7xl"><SectionHeading eyebrow="Полный цикл" title="Что мы берём на себя" /><div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">{responsibilities.map(({ Icon, title: itemTitle, items }) => <article key={itemTitle} className="rounded-[22px] border border-eco-100 bg-white p-6 shadow-sm"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-eco-50 text-eco-700"><Icon size={24} /></span><h3 className="mt-5 text-xl font-bold text-eco-900">{itemTitle}</h3><ul className="mt-4 space-y-2 text-sm leading-6 text-slate-650">{items.map((item) => <li key={item} className="flex gap-2"><Check className="mt-1 shrink-0 text-eco-600" size={16} />{item}</li>)}</ul></article>)}</div></div></section>
 
       <section className="px-4 py-16 sm:px-8 sm:py-20"><div className="mx-auto max-w-7xl"><SectionHeading title="Когда предприятию нужен эколог на аутсорсинге" /><div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{audiences.map(([itemTitle, text], index) => <article key={itemTitle} className="rounded-[22px] border border-slate-200 p-6"><span className="text-sm font-black text-eco-500">0{index + 1}</span><h3 className="mt-3 text-xl font-bold text-eco-900">{itemTitle}</h3><p className="mt-3 leading-7 text-slate-600">{text}</p></article>)}</div></div></section>

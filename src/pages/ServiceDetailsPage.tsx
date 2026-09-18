@@ -14,6 +14,7 @@ import { formatKztPrice, getCatalogService, getServiceGroup, getServicePrimaryCt
 import { company } from '../config/company';
 import { createBlankWhatsAppRequestMessage } from '../utils/whatsapp';
 import { buildBreadcrumbSchema } from '../seo/entityBuilders';
+import { DigitalPekServiceBanner } from '../components/pek/DigitalPekPromo';
 
 const OrderChoiceModal = lazy(() => import('../components/OrderChoiceModal'));
 
@@ -77,6 +78,7 @@ const ServiceDetailsPage = () => {
           ))}
         </div>
       </section>
+      {(catalogService?.slug === 'program-pek' || catalogService?.slug === 'report-pek') && <DigitalPekServiceBanner placement={`service_${catalogService.slug}`} />}
       {catalogService && <section className="bg-eco-50 px-5 py-16 sm:px-8">
         <div className="mx-auto max-w-5xl space-y-10">
           <section>
