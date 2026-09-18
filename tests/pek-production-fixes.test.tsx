@@ -13,7 +13,6 @@ import { canUsePekPermission, canViewPek } from '../src/features/pek/permissions
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { inventoryPayload } from '../src/features/pek/model/pekInventoryFields';
-import type { PekProgram } from '../src/features/pek/api/pekContracts';
 
 vi.mock('../src/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 7, permissions: ['PEK_VIEW'] } }) }));
 const clients: QueryClient[] = [];
@@ -56,7 +55,11 @@ it('uses coordinates in the mutation and restores them after reopening the saved
 });
 
 it('loads each source registry and monitoring points only for the selected program', async () => {
-  vi.spyOn(pekApi, 'getProgram').mockResolvedValue({ monitoring: { items: [{ id: 8 }] } } as PekProgram);
+  vi.spyOn(pekApi, 'getProgramMonitoring').mockResolvedValue({
+    programId: 5,
+    programVersion: 1,
+    items: [{ id: 8 }],
+  } as Awaited<ReturnType<typeof pekApi.getProgramMonitoring>>);
   const points = vi.spyOn(pekApi, 'getMonitoringPoints').mockResolvedValue([]);
   const list = vi.spyOn(pekInventoryApi, 'list').mockResolvedValue([]);
   mount(<PekControlSourceSelect programId={5} value={{ code: '1', name: 'Позиция', mandatory: true, sortOrder: 0, active: true }} onChange={() => {}} />);

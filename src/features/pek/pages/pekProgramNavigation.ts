@@ -29,18 +29,14 @@ export const pekProgramTabs: Array<{ key: PekProgramTabKey; label: string }> = [
   { key: 'emissions', label: 'Источники выбросов' },
   { key: 'monitoring', label: 'Инструментальный контроль' },
   { key: 'calculated-control', label: 'Расчётный контроль' },
-  { key: 'gas-monitoring', label: 'Газовый мониторинг' },
   { key: 'discharges', label: 'Сброс сточных вод' },
-  { key: 'atmospheric-air', label: 'Атмосферный воздух' },
-  { key: 'water', label: 'Водные объекты' },
-  { key: 'soil', label: 'Почва' },
   { key: 'inspections', label: 'Внутренние проверки' },
   { key: 'organization', label: 'Организация контроля' },
   { key: 'documents', label: 'Документы' },
   { key: 'readiness', label: 'Проверка программы' },
 ];
 
-const legacyTabKeys = pekProgramTabs.map(({ key }) => key);
+const legacyTabKeys: PekProgramTabKey[] = ['general', 'waste', 'emissions', 'monitoring', 'calculated-control', 'gas-monitoring', 'discharges', 'atmospheric-air', 'water', 'soil', 'inspections', 'organization', 'documents', 'readiness'];
 export const parsePekProgramTab = (value: string | null): PekProgramTabKey => {
   if (value && legacyTabKeys.includes(value as PekProgramTabKey)) return value as PekProgramTabKey;
   const legacyIndex = Number(value);

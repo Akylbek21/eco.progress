@@ -27,7 +27,8 @@ describe('PEK package regressions', () => {
     expect(canGeneratePekPackage(report({ generateDocument: true, generatePackage: false }))).toBe(false);
     expect(canGeneratePekPackage(report({ generateDocument: true }), false)).toBe(false);
     expect(canGeneratePekPackage(report({}))).toBe(false);
-    for (const status of ['SIGNED', 'ARCHIVED']) expect(canGeneratePekPackage(report({ generatePackage: true }, status), true)).toBe(false);
+    expect(canGeneratePekPackage(report({ generatePackage: true }, 'SIGNED'), true)).toBe(true);
+    expect(canGeneratePekPackage(report({ generatePackage: true }, 'ARCHIVED'), true)).toBe(false);
   });
   it('renders first generation for the action returned by the archived backend', async () => {
     vi.spyOn(pekApi, 'getReportPackage').mockResolvedValue(null);

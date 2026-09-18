@@ -26,7 +26,7 @@ const settingsGroups: Array<{ title: string; fields: Array<[keyof PekSettingsUpd
 ];
 
 const toRequest = (value: NonNullable<Awaited<ReturnType<typeof pekApi.getSettings>>>): PekSettingsUpdateRequest => {
-  const { companyId: _companyId, defaultResponsibleUser: _user, defaultLaboratory: _laboratory, version: _version, availableActions: _actions, ...request } = value;
+  const { companyId: _companyId, defaultResponsibleUser: _user, defaultLaboratory: _laboratory, version: _version, availableActions: _actions, capabilities: _capabilities, requireOfficialReportComplete: _required, firstHead: _firstHead, firstHeadIinConfigured: _iin, ...request } = value;
   return request;
 };
 
@@ -52,6 +52,7 @@ const PekSettingsPage = () => {
       .filter((employee) => employee.role !== 'CLIENT' && employee.status.toLowerCase() === 'active')
       .map((employee) => ({ id: employee.id, name: employee.fullName?.trim() || employee.name, description: employee.position || employee.email, status: 'ACTIVE', role: employee.role })),
   ].map((employee) => [Number(employee.id), employee])).values()];
+  const firstHeadOptions = responsibleOptions.filter((employee) => !['ADMIN', 'ADMINISTRATOR', 'ECOLOGIST'].includes(String(employee.role || '').toUpperCase()));
   const laboratories = useQuery({ queryKey: ['laboratories', 'pek-settings', `user:${user?.id ?? 'anonymous'}`], queryFn: ({ signal }) => getLaboratories({ page: 0, size: 100, status: 'ACTIVE' }, signal) });
   const runScheduler = useMutation({
     mutationFn: () => pekApi.runSchedulerNow(selectedCompanyId, settings.data!.version),
@@ -132,6 +133,7 @@ const PekSettingsPage = () => {
   const responsibleValue = responsibleOptions.some((option) => Number(option.id) === form.defaultResponsibleUserId) ? form.defaultResponsibleUserId ?? '' : '';
   const responsibleLoading = assignees.isLoading || companyStaff.isLoading || systemUsers.isLoading;
   const configuredResponsibleUnavailable = Boolean(form.defaultResponsibleUserId) && !responsibleLoading && !responsibleValue;
+  const firstHeadValue = firstHeadOptions.some((option) => Number(option.id) === form.firstHeadUserId) ? form.firstHeadUserId ?? '' : '';
   const set = <K extends keyof PekSettingsUpdateRequest>(key: K, value: PekSettingsUpdateRequest[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
   return <div className="space-y-5">
     <PekPageHeader title="Настройки ПЭК" description="Правила сбора данных и проверки готовности отчётов" />
@@ -144,7 +146,10 @@ const PekSettingsPage = () => {
         <TextField select label="Ответственный по умолчанию" value={responsibleValue} disabled={!editable || responsibleLoading} error={assignees.isError && companyStaff.isError && systemUsers.isError} helperText={responsibleLoading ? 'Загрузка сотрудников…' : configuredResponsibleUnavailable ? 'Прежний сотрудник больше недоступен — выберите активного.' : undefined} onChange={(event) => set('defaultResponsibleUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбран</MenuItem>{responsibleOptions.map((responsible) => <MenuItem key={responsible.id} value={responsible.id}>{responsible.name}</MenuItem>)}</TextField>
         <TextField select label="Лаборатория по умолчанию для создания протоколов" value={form.defaultLaboratoryId ?? ''} disabled={!editable || laboratories.isLoading} onChange={(event) => set('defaultLaboratoryId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не выбрана</MenuItem>{laboratories.data?.content.map((laboratory) => <MenuItem key={laboratory.id} value={laboratory.id}>{laboratory.name}</MenuItem>)}</TextField>
         <TextField type="number" label="Уведомлять до срока, дней" value={form.notifyBeforeDeadlineDays} disabled={!editable} inputProps={{ min: 0, max: 365 }} onChange={(event) => set('notifyBeforeDeadlineDays', Number(event.target.value))} />
+        <TextField select label="Первый руководитель" value={firstHeadValue} disabled={!editable || responsibleLoading} helperText={settings.data.firstHeadUserId && !settings.data.firstHeadIinConfigured ? 'У выбранного руководителя не указан ИИН — подписание будет недоступно.' : 'Только назначенный первый руководитель сможет подписать официальный отчёт.'} onChange={(event) => set('firstHeadUserId', event.target.value ? Number(event.target.value) : null)}><MenuItem value="">Не назначен</MenuItem>{firstHeadOptions.map((employee) => <MenuItem key={employee.id} value={employee.id}>{employee.name}</MenuItem>)}</TextField>
+        <TextField label="Должность первого руководителя" value={form.firstHeadPosition || ''} disabled={!editable} onChange={(event) => set('firstHeadPosition', event.target.value || null)} />
       </div>
+      <Alert severity={settings.data.requireOfficialReportComplete ? 'info' : 'warning'}>Полнота официального отчёта обязательна и не может быть отключена.{settings.data.firstHeadUserId ? ` Подписант: ${settings.data.firstHead?.fullName || `сотрудник №${settings.data.firstHeadUserId}`}.` : ' Назначьте первого руководителя до подписания.'}</Alert>
       <FormControlLabel control={<Checkbox checked={form.autoCollectProtocols} disabled={!editable} onChange={(event) => set('autoCollectProtocols', event.target.checked)} />} label="Автоматически получать протоколы" />
       <div className="grid gap-4 xl:grid-cols-3">{settingsGroups.map((group) => <fieldset key={group.title} className="min-w-0 rounded-xl border p-4"><legend className="max-w-full px-2 font-black">{group.title}</legend><div className="grid gap-2">{group.fields.map(([key, label]) => <FormControlLabel key={key} control={<Checkbox checked={Boolean(form[key])} disabled={!editable} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}</div></fieldset>)}</div>
       <div className="flex flex-wrap gap-3">{canRunScheduler && <Button variant="outlined" disabled={runScheduler.isPending} onClick={() => runScheduler.mutate()}>{runScheduler.isPending ? 'Получаем протоколы…' : 'Получить протоколы сейчас'}</Button>}{canRunGlobalScheduler && <Button variant="outlined" disabled={runGlobalScheduler.isPending} onClick={() => runGlobalScheduler.mutate()}>{runGlobalScheduler.isPending ? 'Глобальный запуск…' : 'Получить протоколы по всем компаниям'}</Button>}</div>

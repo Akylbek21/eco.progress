@@ -15,15 +15,15 @@ export const pekProgramFormSchema = z.object({
   validFrom: z.string().min(1, 'Укажите начало действия'),
   validUntil: z.string().min(1, 'Укажите окончание действия'),
   responsibleUserId: z.number().int().positive().nullish(),
-  facilityInformation: z.string().nullish(),
-  kato: z.string().nullish(),
-  bin: z.string().refine((value) => !value || /^\d{12}$/.test(value), 'БИН должен содержать 12 цифр').nullish(),
-  oked: z.string().nullish(),
-  environmentalCategory: z.enum(['I', 'II'], { message: 'Программа ПЭК поддерживается только для I и II категории' }).or(z.literal('')).nullish(),
-  designCapacity: z.string().nullish(),
-  designCapacityUnit: z.string().nullish(),
-  productionCharacteristics: z.string().nullish(),
-  monitoringScope: z.string().nullish(),
+  facilityInformation: z.string().trim().min(1, 'Укажите сведения об объекте'),
+  kato: z.string().trim().min(1, 'Укажите КАТО'),
+  bin: z.string().trim().regex(/^\d{12}$/, 'БИН должен содержать 12 цифр'),
+  oked: z.string().trim().min(1, 'Укажите ОКЭД'),
+  environmentalCategory: z.enum(['I', 'II'], { message: 'Выберите I или II категорию объекта' }),
+  designCapacity: z.string().trim().min(1, 'Укажите проектную мощность'),
+  designCapacityUnit: z.string().trim().min(1, 'Укажите единицу проектной мощности'),
+  productionCharacteristics: z.string().trim().min(1, 'Заполните характеристику производства'),
+  monitoringScope: z.string().trim().min(1, 'Опишите организацию мониторинга'),
   permitIds: z.array(z.number().int().positive()).optional(),
   readinessNotes: z.string().nullish(),
   controlItems: z.array(z.object({
@@ -48,6 +48,8 @@ export const pekProgramFormSchema = z.object({
     normativeValue: z.number().nullable().optional(),
     minValue: z.number().nullable().optional(),
     maxValue: z.number().nullable().optional(),
+    normativeId: z.number().int().positive().nullable().optional(),
+    manualNormativeReason: z.string().nullable().optional(),
   }).passthrough()).min(1, 'Добавьте хотя бы один показатель'),
   measures: z.array(z.object({
     clientId: z.string().min(1),
@@ -74,6 +76,8 @@ export const pekProgramFormSchema = z.object({
     }
   });
   value.controlItems.forEach((item, index) => {
+    const locationCount = [item.monitoringPointId, item.emissionSourceId, item.waterOutletId, item.wasteSourceId, item.appliesToAllPoints ? 1 : null].filter(Boolean).length;
+    if (locationCount !== 1) context.addIssue({ code: 'custom', path: ['controlItems', index, 'monitoringPointId'], message: 'Выберите ровно одну точку или источник' });
     if (item.controlType && laboratoryControlTypes.has(item.controlType)) {
       if (!item.laboratoryId) context.addIssue({ code: 'custom', path: ['controlItems', index, 'laboratoryId'], message: 'Выберите лабораторию для лабораторного контроля' });
       const measurementMethod = typeof item.measurementMethod === 'string' ? item.measurementMethod : '';
@@ -82,6 +86,9 @@ export const pekProgramFormSchema = z.object({
     }
     if (item.frequencyType === 'PER_EVENT' && !item.plannedCount) {
       context.addIssue({ code: 'custom', path: ['controlItems', index, 'plannedCount'], message: 'Для контроля по событию укажите плановое количество' });
+    }
+    if (item.controlMethod === 'INSTRUMENTAL' && item.samplingRequired && !item.samplingMethodId && !String(item.samplingMethod || '').trim()) {
+      context.addIssue({ code: 'custom', path: ['controlItems', index, 'samplingMethodId'], message: 'Выберите метод отбора проб' });
     }
     if (item.startDate && item.endDate && item.endDate < item.startDate) {
       context.addIssue({ code: 'custom', path: ['controlItems', index, 'endDate'], message: 'Окончание контроля не может быть раньше начала' });
@@ -97,6 +104,7 @@ export const pekProgramFormSchema = z.object({
     }
   });
   value.indicators.forEach((indicator, index) => {
+    if (!indicator.normativeId && !indicator.manualNormativeReason?.trim()) context.addIssue({ code: 'custom', path: ['indicators', index, 'manualNormativeReason'], message: 'Выберите норматив разрешения или укажите причину ручного норматива' });
     if (indicator.comparisonType === 'RANGE' || indicator.comparisonType === 'BETWEEN') {
       if (indicator.minValue == null || indicator.maxValue == null) {
         context.addIssue({ code: 'custom', path: ['indicators', index, 'minValue'], message: 'Для диапазона укажите минимум и максимум' });

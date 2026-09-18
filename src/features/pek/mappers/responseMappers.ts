@@ -191,6 +191,9 @@ export const mapReportResponse = (
   const source = row(validatePekContract(pekReportContractSchema, value, 'отчёта ПЭК'));
   const responsibleUser = named(source.responsibleUser);
   const submission = row(source.submission);
+  const explanatoryNote = row(source.explanatoryNote);
+  const officialSignatory = row(source.officialSignatory);
+  const operationStatus = row(source.operationStatus);
   const hasSubmission = Object.keys(submission).length > 0;
   return {
     ...source,
@@ -239,6 +242,27 @@ export const mapReportResponse = (
     linkedProtocolCount: numberValue(source.linkedProtocolCount),
     linkedProtocolNumbers,
     lastCollectedAt: source.lastCollectedAt == null ? null : String(source.lastCollectedAt),
+    explanatoryNote: Object.keys(explanatoryNote).length ? {
+      performedStudies: explanatoryNote.performedStudies == null ? null : String(explanatoryNote.performedStudies),
+      monitoringResultsSummary: explanatoryNote.monitoringResultsSummary == null ? null : String(explanatoryNote.monitoringResultsSummary),
+      exceedancesSummary: explanatoryNote.exceedancesSummary == null ? null : String(explanatoryNote.exceedancesSummary),
+      measuresTaken: explanatoryNote.measuresTaken == null ? null : String(explanatoryNote.measuresTaken),
+      conclusion: explanatoryNote.conclusion == null ? null : String(explanatoryNote.conclusion),
+    } : null,
+    officialSignatory: Object.keys(officialSignatory).length ? {
+      userId: numberValue(officialSignatory.userId),
+      name: String(officialSignatory.name || ''),
+      position: officialSignatory.position == null ? null : String(officialSignatory.position),
+      iinConfigured: officialSignatory.iinConfigured === true,
+      currentUserCanSign: officialSignatory.currentUserCanSign === true,
+    } : null,
+    operationStatus: Object.keys(operationStatus).length ? {
+      status: String(operationStatus.status || 'OPERATING'),
+      label: operationStatus.label == null ? null : String(operationStatus.label),
+      reason: operationStatus.reason == null ? null : String(operationStatus.reason),
+      explanationFileAttached: operationStatus.explanationFileAttached === true,
+      explanationFileName: operationStatus.explanationFileName == null ? null : String(operationStatus.explanationFileName),
+    } : null,
     availableActions: availableActionFlags(source.availableActions) as PekReport['availableActions'],
     returnInfo: returnInfo(source.returnInfo),
   };

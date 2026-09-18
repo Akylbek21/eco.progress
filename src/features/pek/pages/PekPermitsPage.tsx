@@ -21,6 +21,8 @@ import { canUsePekPermission } from '../permissions/pekAccess';
 import { mapPekError } from '../utils/pekErrorMapper';
 import { handlePekMutationError } from '../utils/pekMutationError';
 import { retryPekQuery } from '../utils/pekQueryPolicy';
+import PekPermitRevisions from '../components/permits/PekPermitRevisions';
+import PekPermitNormatives from '../components/permits/PekPermitNormatives';
 
 const saveBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -133,6 +135,7 @@ const PekPermitsPage = () => {
   const objectId = Number(params.get('objectId')) || 0;
   const [editing, setEditing] = useState<PekPermit | 'new' | null>(null);
   const [historyPermit, setHistoryPermit] = useState<PekPermit | null>(null);
+  const [revisionPermit, setRevisionPermit] = useState<PekPermit | null>(null);
   const [mutationError, setMutationError] = useState('');
   const canCreate = canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
   const canChangePermitStatus = canUsePekPermission(user, 'PEK_PROGRAM_EDIT');
@@ -251,7 +254,8 @@ const PekPermitsPage = () => {
                     {(permit.availableActions?.markExpired ?? canChangePermitStatus) && <Button type="button" variant="secondary" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'EXPIRED')}><ShieldAlert size={14} /> Истёк</Button>}
                     {(permit.availableActions?.revoke ?? canChangePermitStatus) && <Button type="button" variant="danger" disabled={changeStatus.isPending} onClick={() => requestStatus(permit, 'REVOKED')}><ShieldAlert size={14} /> Отозвать</Button>}
                     {permit.fileId && <Button type="button" variant="secondary" disabled={download.isPending} onClick={() => download.mutate(permit)}><Download size={14} /> Скачать</Button>}
-                    <Button type="button" variant="secondary" onClick={() => setHistoryPermit(permit)}><History size={14} /> История</Button>
+                     <Button type="button" variant="secondary" onClick={() => setHistoryPermit(permit)}><History size={14} /> История</Button>
+                     <Button type="button" variant="secondary" onClick={() => setRevisionPermit(permit)}>Редакции и лимиты</Button>
                   </ActionMenu></td>
                 </tr>)}</tbody>
               </table>
@@ -280,6 +284,7 @@ const PekPermitsPage = () => {
               {item.comment && <p className="mt-2 text-sm text-slate-700">{item.comment}</p>}
             </li>)}</ol>}
     </Modal>}
+    {revisionPermit && <Modal isOpen title={`Редакции разрешения № ${revisionPermit.number}`} onClose={() => setRevisionPermit(null)}><div className="space-y-6"><PekPermitRevisions permit={revisionPermit} editable={canCreate} /><PekPermitNormatives permit={revisionPermit} editable={canCreate} /></div></Modal>}
   </div>;
 };
 

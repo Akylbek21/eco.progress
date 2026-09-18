@@ -201,6 +201,53 @@ export type PekProgramAvailableActions = {
   retemplate?: boolean;
 };
 
+export interface PekPermitLimit {
+  id: number | null;
+  emissionSourceId: number | null;
+  dischargeSourceId: number | null;
+  wasteItemId: number | null;
+  substanceCode: string | null;
+  substanceName: string | null;
+  limitGs: number | null;
+  limitTonsYear: number | null;
+  limitMgM3: number | null;
+  limitMgDm3: number | null;
+  limitTons: number | null;
+}
+export interface PekPermitCondition {
+  id: number | null;
+  clause: string;
+  conditionType: string;
+  text: string;
+  sortOrder: number;
+  limits: PekPermitLimit[];
+}
+export interface PekPermitRevision {
+  id: number;
+  permitId: number;
+  revisionNumber: number;
+  basis: string | null;
+  documentNumber: string | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  status: 'DRAFT' | 'ACTIVE' | 'SUPERSEDED' | string;
+  activatedAt: string | null;
+  conditions: PekPermitCondition[];
+  version: number;
+  availableActions: Record<string, boolean>;
+}
+export type PekPermitRevisionCreateRequest = Pick<PekPermitRevision, 'basis' | 'documentNumber' | 'effectiveFrom' | 'effectiveTo'>;
+export interface PekAvailablePermitLimit {
+  limitId: number;
+  permitId: number;
+  permitNumber: string;
+  revisionId: number;
+  revisionNumber: number;
+  clause: string;
+  conditionType: string;
+  limit: PekPermitLimit;
+}
+
 export type PekReportAvailableActions = {
   collect: boolean;
   manageSources: boolean;
@@ -230,6 +277,7 @@ export interface PekControlItem {
   controlType?: PekControlType | null;
   environmentComponent?: string | null;
   monitoringPointId?: PekId | null;
+  appliesToAllPoints?: boolean | null;
   emissionSourceId?: PekId | null;
   waterOutletId?: PekId | null;
   wasteSourceId?: PekId | null;
@@ -239,6 +287,13 @@ export interface PekControlItem {
   plannedCount?: number | null;
   measurementMethod?: string | null;
   samplingMethod?: string | null;
+  samplingMethodId?: PekId | null;
+  samplingMethodName?: string | null;
+  measurementMethodId?: PekId | null;
+  measurementMethodName?: string | null;
+  controlMethod?: 'INSTRUMENTAL' | 'AUTOMATIC' | 'CALCULATION' | 'VISUAL' | null;
+  samplingRequired?: boolean | null;
+  controlLocation?: { type: string; id: number | null; name: string } | null;
   startDate?: string | null;
   endDate?: string | null;
   responsibleUserId?: PekId | null;
@@ -266,6 +321,10 @@ export interface PekIndicator {
   maxValue?: number | null;
   methodologyId?: PekId | null;
   measurementDeviceType?: string | null;
+  measurementDeviceTypeId?: PekId | null;
+  permitLimitId?: PekId | null;
+  manualNormativeReason?: string | null;
+  normativeSource?: 'PERMIT' | 'MANUAL' | 'NONE' | string | null;
   mandatory: boolean;
   sortOrder: number;
 }
@@ -337,6 +396,48 @@ export interface PekProgram {
   ready?: boolean;
   blockingReasons?: string[];
   warnings?: string[];
+}
+
+export interface PekSectionApplicability {
+  section: string;
+  label: string;
+  status: 'APPLICABLE' | 'NOT_APPLICABLE' | null;
+  reason: string | null;
+  version: number | null;
+  hasContent: boolean;
+}
+export interface PekPermitNormative {
+  id: number;
+  permitId: number;
+  permitNumber: string;
+  sourceType: 'EMISSION_SOURCE' | 'WATER_OUTLET' | 'WASTE_SOURCE' | 'MONITORING_POINT' | null;
+  sourceId: number | null;
+  sourceName: string | null;
+  indicatorId: number | null;
+  indicatorCode: string | null;
+  indicatorName: string;
+  comparisonType: ComparisonType | 'INFO' | 'EQUAL' | 'ABSENT' | string;
+  minValue: number | null;
+  maxValue: number | null;
+  normativeValue: number | null;
+  unit: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  basis: string | null;
+  version: number;
+}
+export type PekPermitNormativeRequest = Omit<PekPermitNormative, 'id' | 'permitId' | 'permitNumber' | 'sourceName' | 'version'>;
+export interface PekReferenceItem { id: number; code: string; name: string; document: string | null }
+export interface PekIndicatorLookup { id: number; code: string; name: string; hazardClass: string | null }
+export interface PekResponsibleUser { id: number; name: string; position: string | null; email: string; tier: string }
+export interface PekApprovalSnapshot {
+  id: number; programId: number; regulationCode: string; regulationVersion: string; formVersion: string;
+  contentRevision: number; approvedAt: string; approvedBy: number; approvedByName: string; payloadSha256: string; payload: unknown;
+}
+export interface PekApplyNormativesResponse {
+  applied: Array<{ indicatorId: number; indicatorName: string; normativeId: number; permitId: number }>;
+  unresolved: Array<{ indicatorId: number; indicatorName: string; reason: string }>;
+  programVersion: number;
 }
 
 export type PekMonitoringType =
@@ -504,6 +605,27 @@ export interface PekReport {
   linkedProtocolCount: number;
   linkedProtocolNumbers: string[];
   lastCollectedAt?: string | null;
+  explanatoryNote: {
+    performedStudies: string | null;
+    monitoringResultsSummary: string | null;
+    exceedancesSummary: string | null;
+    measuresTaken: string | null;
+    conclusion: string | null;
+  } | null;
+  officialSignatory: {
+    userId: number;
+    name: string;
+    position: string | null;
+    iinConfigured: boolean;
+    currentUserCanSign: boolean;
+  } | null;
+  operationStatus: {
+    status: 'OPERATING' | 'NOT_OPERATING' | 'TEMPORARILY_SUSPENDED' | string;
+    label: string | null;
+    reason: string | null;
+    explanationFileAttached: boolean;
+    explanationFileName: string | null;
+  } | null;
   availableActions: PekReportAvailableActions;
   returnInfo?: {
     reason?: string;
@@ -611,6 +733,50 @@ export interface PekReportPackage {
   staleDocuments: PekPackageIssue[];
   readiness: PekPackageIssue[];
 }
+export type PekReportGeneralUpdate = {
+  actualCapacity?: string | null;
+  actualCapacityUnit?: string | null;
+  performedStudies?: string | null;
+  monitoringResultsSummary?: string | null;
+  exceedancesSummary?: string | null;
+  measuresTaken?: string | null;
+  conclusion?: string | null;
+  operationStatus?: 'OPERATING' | 'NOT_OPERATING' | 'TEMPORARILY_SUSPENDED' | null;
+  operationStatusReason?: string | null;
+};
+export interface PekMeasureExecution {
+  measureId: number;
+  code: string | null;
+  name: string;
+  workVolume: string | null;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  plannedAmount: number | null;
+  currency: string | null;
+  actualAmount: number | null;
+  utilizationPercent: number | null;
+  completionPercent: number | null;
+  environmentalEffect: string | null;
+  status: string | null;
+  note: string | null;
+  nonCompletionReason: string | null;
+  version: number;
+}
+export type PekMeasureExecutionRequest = Pick<PekMeasureExecution, 'measureId' | 'actualAmount' | 'completionPercent' | 'status' | 'note' | 'nonCompletionReason'>;
+export interface PekEmissionBalance {
+  emissionSourceId: number;
+  sourceCode: string | null;
+  sourceName: string | null;
+  substanceCode: string;
+  substanceName: string | null;
+  withoutTreatmentTons: number | null;
+  capturedTons: number | null;
+  utilizedTons: number | null;
+  increaseReason: string | null;
+  increaseReasonRequired: boolean;
+  version: number;
+}
+export type PekEmissionBalanceRequest = Pick<PekEmissionBalance, 'emissionSourceId' | 'substanceCode' | 'withoutTreatmentTons' | 'capturedTons' | 'utilizedTons' | 'increaseReason'>;
 export type PekPackageFileStatus = 'READY' | 'MISSING' | 'STALE';
 export interface PekPackageIssue {
   code: string;
@@ -1053,6 +1219,12 @@ export interface PekSettings {
   notifyMissingProtocols: boolean;
   notifyExceedances: boolean;
   notifyReportReturned: boolean;
+  requireOfficialReportComplete: boolean;
+  firstHeadUserId: number | null;
+  firstHead?: { id: number; fullName: string } | null;
+  firstHeadPosition: string | null;
+  firstHeadIinConfigured: boolean;
+  capabilities?: Record<string, boolean>;
   version: number;
   availableActions?: {
     edit?: boolean;
@@ -1061,7 +1233,7 @@ export interface PekSettings {
   };
 }
 
-export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'version' | 'availableActions'>;
+export type PekSettingsUpdateRequest = Omit<PekSettings, 'companyId' | 'defaultResponsibleUser' | 'defaultLaboratory' | 'version' | 'availableActions' | 'capabilities' | 'requireOfficialReportComplete' | 'firstHead' | 'firstHeadIinConfigured'>;
 
 export interface PekMonitoringPoint {
   id: number;

@@ -165,6 +165,15 @@ const form: PekProgramForm = {
   validFrom: '2026-01-01',
   validUntil: '2026-12-31',
   responsibleUserId: 7,
+  facilityInformation: 'Производственный объект, площадка № 1',
+  kato: '711310000',
+  bin: '123456789012',
+  oked: '23.51',
+  environmentalCategory: 'II',
+  designCapacity: '1200',
+  designCapacityUnit: 'т/год',
+  productionCharacteristics: 'Основные производственные и технологические процессы',
+  monitoringScope: 'Контроль воздуха и сточных вод',
   controlItems: [{
     clientId: 'control-a',
     code: 'AIR-1',
@@ -172,6 +181,7 @@ const form: PekProgramForm = {
     controlType: 'EMISSION',
     laboratoryId: 5,
     frequencyType: 'QUARTERLY',
+    monitoringPointId: 15,
     measurementMethod: 'СТ РК 1',
     mandatory: true,
     active: true,
@@ -184,6 +194,8 @@ const form: PekProgramForm = {
     unit: 'mg/m3',
     comparisonType: 'LESS_OR_EQUAL',
     normativeValue: 10,
+    normativeId: 25,
+    normativeSource: 'PERMIT',
     mandatory: true,
     sortOrder: 0,
   }],
@@ -489,7 +501,7 @@ describe('PEK backend contract', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/features/pek/pages/PekReportWorkspacePage.tsx'), 'utf8');
     expect(source).toContain("item.status === 'RETURNED'");
     expect(source).toContain('Отчёт возвращён на доработку');
-    expect(source).toContain("STALE: 'Источник изменён'");
+    expect(readFileSync(resolve(process.cwd(), 'src/features/pek/utils/pekLabels.ts'), 'utf8')).toContain("STALE: 'Источник изменён'");
     expect(source).toContain('getReportReadiness(id, signal)');
     expect(source).toContain('Данные были изменены другим сотрудником');
   });

@@ -15,6 +15,10 @@ import type {
   PekPermitFileUploadResponse,
   PekPermitStatusRequest,
   PekPermitUpdateRequest,
+  PekPermitRevision,
+  PekPermitRevisionCreateRequest,
+  PekPermitCondition,
+  PekAvailablePermitLimit,
   PekProgram,
   PekProgramCreateRequest,
   PekProgramCloneRequest,
@@ -22,6 +26,11 @@ import type {
   PekProgramUpdateRequest,
   PekMonitoringMutationRequest,
   PekReport,
+  PekReportGeneralUpdate,
+  PekMeasureExecution,
+  PekMeasureExecutionRequest,
+  PekEmissionBalance,
+  PekEmissionBalanceRequest,
   PekReportCreateRequest,
   PekRecordSubmissionRequest,
   PekSubmitReportRequest,
@@ -63,6 +72,14 @@ import type {
   PekStaffAssignment,
   PekStaffAssignmentCreateRequest,
   PekStaffAssignmentUpdateRequest,
+  PekSectionApplicability,
+  PekPermitNormative,
+  PekPermitNormativeRequest,
+  PekReferenceItem,
+  PekIndicatorLookup,
+  PekResponsibleUser,
+  PekApprovalSnapshot,
+  PekApplyNormativesResponse,
 } from './pekContracts';
 import {
   mapCollectionResult,
@@ -189,6 +206,16 @@ export const pekApi = {
     get<PekHistoryItem[]>(`/pek/programs/${id}/history`, {}, signal),
   getProgramReadiness: (id: number, signal?: AbortSignal) =>
     get<PekReadinessResponse>(`/pek/programs/${id}/readiness`, {}, signal),
+  getSectionApplicability: (id: number, signal?: AbortSignal) =>
+    get<PekSectionApplicability[]>(`/pek/programs/${id}/section-applicability`, {}, signal),
+  updateSectionApplicability: async (id: number, version: number, sections: Array<Pick<PekSectionApplicability, 'section' | 'status' | 'reason'>>) =>
+    unwrapPekData<PekSectionApplicability[]>((await api.put(`/pek/programs/${id}/section-applicability`, { sections }, pekMutationOptions(version))).data),
+  getApprovalSnapshots: (id: number, signal?: AbortSignal) =>
+    get<PekApprovalSnapshot[]>(`/pek/programs/${id}/approval-snapshots`, {}, signal),
+  getLatestApprovalSnapshot: (id: number, signal?: AbortSignal) =>
+    get<PekApprovalSnapshot>(`/pek/programs/${id}/approval-snapshots/latest`, {}, signal),
+  applyProgramNormatives: async (id: number, version: number) =>
+    unwrapPekData<PekApplyNormativesResponse>((await api.post(`/pek/programs/${id}/indicators/apply-normatives`, {}, pekMutationOptions(version))).data),
   getProgramMonitoring: async (id: number, signal?: AbortSignal) =>
     mapProgramMonitoring(await get<unknown>(`/pek/programs/${id}/monitoring`, {}, signal), id),
   createProgramMonitoring: async (id: number, version: number, body: PekMonitoringMutationRequest) =>
@@ -292,6 +319,22 @@ export const pekApi = {
   },
   getPermitHistory: (id: number, signal?: AbortSignal) =>
     get<PekPermitHistoryEntry[]>(`/pek/permits/${id}/history`, {}, signal),
+  getPermitNormatives: (id: number, signal?: AbortSignal) => get<PekPermitNormative[]>(`/pek/permits/${id}/normatives`, {}, signal),
+  createPermitNormative: async (id: number, body: PekPermitNormativeRequest) => unwrapPekData<PekPermitNormative>((await api.post(`/pek/permits/${id}/normatives`, body)).data),
+  updatePermitNormative: async (permitId: number, normativeId: number, version: number, body: PekPermitNormativeRequest) => unwrapPekData<PekPermitNormative>((await api.put(`/pek/permits/${permitId}/normatives/${normativeId}`, body, pekMutationOptions(version))).data),
+  deletePermitNormative: async (permitId: number, normativeId: number) => { await api.delete(`/pek/permits/${permitId}/normatives/${normativeId}`); },
+  getPermitRevisions: (id: number, signal?: AbortSignal) =>
+    get<PekPermitRevision[]>(`/pek/permits/${id}/revisions`, {}, signal),
+  createPermitRevision: async (id: number, body: PekPermitRevisionCreateRequest) =>
+    unwrapPekData<PekPermitRevision>((await api.post(`/pek/permits/${id}/revisions`, body)).data),
+  replacePermitRevisionConditions: async (permitId: number, revisionId: number, version: number, body: PekPermitCondition[]) =>
+    unwrapPekData<PekPermitRevision>((await api.put(`/pek/permits/${permitId}/revisions/${revisionId}/conditions`, body, pekMutationOptions(version))).data),
+  activatePermitRevision: async (permitId: number, revisionId: number, version: number) =>
+    unwrapPekData<PekPermitRevision>((await api.post(`/pek/permits/${permitId}/revisions/${revisionId}/activate`, {}, pekMutationOptions(version))).data),
+  getProgramPermitLimits: (programId: number, signal?: AbortSignal) =>
+    get<PekAvailablePermitLimit[]>(`/pek/programs/${programId}/permit-limits`, {}, signal),
+  linkIndicatorPermitLimit: async (programId: number, indicatorId: number, permitLimitId: number | null, version: number) =>
+    unwrapPekData<{ indicatorId: number; permitLimitId: number | null; limit: PekAvailablePermitLimit | null }>((await api.put(`/pek/programs/${programId}/indicators/${indicatorId}/permit-limit`, { permitLimitId }, pekMutationOptions(version))).data),
   async getReports(filters: PekReportFilters, signal?: AbortSignal): Promise<PageResponse<PekReport>> {
     const page = mapPekPage<unknown>(
       (await api.get('/pek/reports', { params: cleanParams(filters), signal })).data,
@@ -302,8 +345,25 @@ export const pekApi = {
     mapReportResponse(await get<unknown>(`/pek/reports/${id}`, {}, signal)),
   getOfficialReportData: (id: number, signal?: AbortSignal) =>
     get<PekOfficialReportData>(`/pek/reports/${id}/official-data`, {}, signal),
-  updateReportGeneral: async (id: number, version: number, body: { actualCapacity: string | null; actualCapacityUnit: string | null }) =>
+  updateReportGeneral: async (id: number, version: number, body: PekReportGeneralUpdate) =>
     mapReportResponse(unwrapPekData<unknown>((await api.patch(`/pek/reports/${id}/general`, body, pekMutationOptions(version))).data)),
+  getMeasureExecutions: (id: number, signal?: AbortSignal) =>
+    get<PekMeasureExecution[]>(`/pek/reports/${id}/measure-executions`, {}, signal),
+  saveMeasureExecutions: async (id: number, version: number, rows: PekMeasureExecutionRequest[]) =>
+    unwrapPekData<PekMeasureExecution[]>((await api.put(`/pek/reports/${id}/measure-executions`, rows, pekMutationOptions(version))).data),
+  getEmissionBalances: (id: number, signal?: AbortSignal) =>
+    get<PekEmissionBalance[]>(`/pek/reports/${id}/emission-balances`, {}, signal),
+  saveEmissionBalances: async (id: number, version: number, rows: PekEmissionBalanceRequest[]) =>
+    unwrapPekData<PekEmissionBalance[]>((await api.put(`/pek/reports/${id}/emission-balances`, rows, pekMutationOptions(version))).data),
+  uploadOperationExplanation: async (id: number, version: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return unwrapPekData<PekReport['operationStatus']>((await api.post(`/pek/reports/${id}/operation-explanation`, form, pekMutationOptions(version))).data);
+  },
+  downloadOperationExplanation: async (id: number): Promise<PekBlobResult> => {
+    const response = await api.get<Blob>(`/pek/reports/${id}/operation-explanation`, { responseType: 'blob' });
+    return { blob: response.data, filename: filenameFromDisposition(response.headers['content-disposition'], `operation-explanation-${id}`) };
+  },
   getReportCreationContext: async (params: PekReportCreationParams, signal?: AbortSignal) => {
     const context = await get<PekCreationContext>('/pek/reports/creation-context', params, signal);
     return {
@@ -462,6 +522,11 @@ export const pekApi = {
   getControlItemProtocols: (controlItemId: number, signal?: AbortSignal) =>
     get<PekProtocolLink[]>(`/pek/control-items/${controlItemId}/protocols`, {}, signal),
   getSettings: (companyId: number, signal?: AbortSignal) => get<PekSettings>('/pek/settings', { companyId }, signal),
+  getDeviceTypes: (signal?: AbortSignal) => get<PekReferenceItem[]>('/pek/lookups/device-types', {}, signal),
+  getMethods: (kind: 'SAMPLING' | 'MEASUREMENT', signal?: AbortSignal) => get<PekReferenceItem[]>('/pek/lookups/methods', { kind }, signal),
+  getIndicatorLookup: (search = '', limit = 100, signal?: AbortSignal) => get<PekIndicatorLookup[]>('/pek/lookups/indicators', { search, limit }, signal),
+  getNormativeLookup: (params: { indicatorId?: number; permitId?: number; sourceId?: number; programId?: number; date?: string }, signal?: AbortSignal) => get<PekPermitNormative[]>('/pek/lookups/normatives', params, signal),
+  getProgramResponsibleUsers: (programId: number, signal?: AbortSignal) => get<PekResponsibleUser[]>(`/pek/programs/${programId}/responsible-users`, {}, signal),
   updateSettings: async (companyId: number, version: number, body: PekSettingsUpdateRequest) =>
     unwrapPekData<PekSettings>((await api.put('/pek/settings', body, { ...pekMutationOptions(version), params: { companyId } })).data),
   runSchedulerNow: async (companyId: number, version: number): Promise<void> => {

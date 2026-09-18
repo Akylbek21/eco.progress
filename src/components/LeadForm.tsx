@@ -20,6 +20,7 @@ type LeadFormProps = {
   sourcePage?: string;
   locale?: 'ru' | 'kk';
   submitLabel?: string;
+  showIdentityFields?: boolean;
 };
 
 const successDocumentPrompt = (serviceSlug: string, isKk: boolean) => {
@@ -36,7 +37,7 @@ const successDocumentPrompt = (serviceSlug: string, isKk: boolean) => {
   return 'Специалист получил запрос. Если хотите ускорить расчёт, отправьте перечень отходов, проект или протоколы в WhatsApp.';
 };
 
-const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация', variant = 'light', formId = source, ctaId, serviceSlug, sourcePage, locale = 'ru', submitLabel }: LeadFormProps) => {
+const LeadForm = ({ source = 'site_form', title = 'Получить консультацию', compact = false, defaultService = 'Не знаю, нужна консультация', variant = 'light', formId = source, ctaId, serviceSlug, sourcePage, locale = 'ru', submitLabel, showIdentityFields = false }: LeadFormProps) => {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -68,6 +69,8 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
     const phone = String(form.get('phone') || '').trim();
+    const leadName = String(form.get('name') || '').trim();
+    const leadCompany = String(form.get('company') || '').trim();
     const city = String(form.get('city') || '').trim();
     const serviceType = String(form.get('serviceType') || '').trim();
     const comment = String(form.get('comment') || '').trim();
@@ -83,6 +86,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       objectType && `Вид объекта / проектируемая деятельность: ${objectType}`,
       serviceDetail && `${serviceDetailLabel[normalizedServiceSlug] || 'Параметр услуги'}: ${serviceDetail}`,
       comment && `Что нужно / комментарий: ${comment}`,
+      leadCompany && `Компания: ${leadCompany}`,
     ].filter(Boolean).join('\n');
     const selectedService = activeServices.find((item) => item.title === serviceType);
     setWhatsAppFallbackUrl('');
@@ -116,7 +120,7 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
         formId,
         ctaId,
       };
-      await createLead({ name: 'Заявка с сайта', phone, city, serviceType, comment: enrichedComment, source, attribution });
+      await createLead({ name: leadName || 'Заявка с сайта', phone, city, serviceType, comment: enrichedComment, source, attribution });
       trackContentEvent({ eventName: 'form_submit', pageType: attribution.sourceType || 'UNKNOWN', contentSlug: attribution.sourceSlug, serviceId: attribution.serviceId, serviceSlug: attribution.serviceSlug, ctaId, position: formId });
       setSent(true);
       toast.success(isKk ? 'Өтінім қабылданды' : 'Заявка принята', isKk ? 'Маман өтінімді алды және сізбен байланысады.' : 'Специалист получил запрос и свяжется с вами.');
@@ -171,10 +175,18 @@ const LeadForm = ({ source = 'site_form', title = 'Получить консул
       <h2 className={`text-2xl font-bold ${isBlue ? 'border-l-2 border-accent/80 pl-4 text-white' : 'text-eco-900'}`}>{title}</h2>
       {!compact && <p className={`mt-3 text-sm leading-6 ${isBlue ? 'text-white/72' : 'text-slate-600'}`}>{isKk ? `Байланыс деректерін қалдырыңыз. ${company.brandName} маманы келесі қадамды түсіндіреді.` : `Оставьте контакты. Специалист ${company.siteLabel} свяжется с вами и подскажет следующий шаг.`}</p>}
       <div className="mt-6 grid gap-4">
+        {showIdentityFields && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
+          <span>Имя</span>
+          <input name="name" autoComplete="name" className={fieldClassName} />
+        </label>}
         <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           <span>Телефон / WhatsApp *</span>
           <input name="phone" required inputMode="tel" className={fieldClassName} />
         </label>
+        {showIdentityFields && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
+          <span>Компания <span className="font-normal opacity-70">— необязательно</span></span>
+          <input name="company" autoComplete="organization" className={fieldClassName} />
+        </label>}
         <input type="hidden" name="serviceType" value={defaultService} />
         {isLandingShortForm && <label className={`text-sm font-semibold ${isBlue ? 'text-white/82' : 'text-slate-700'}`}>
           {isKk ? 'Қала' : 'Город'}

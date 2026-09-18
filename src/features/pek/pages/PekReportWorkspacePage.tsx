@@ -20,6 +20,7 @@ import PekReportExceedances from '../components/exceedances/PekReportExceedances
 import PekInventoryEditor from '../components/inventory/PekInventoryEditor';
 import PekReportSubmissionDialog, { pekSubmissionMethodLabels, type PekSubmissionDraft } from '../components/submission/PekReportSubmissionDialog';
 import PekOfficialReport from '../components/official/PekOfficialReport';
+import PekReportPackageInputs from '../components/official/PekReportPackageInputs';
 import PekProtocolQuickEntryDialog from '../components/protocols/PekProtocolQuickEntryDialog';
 
 const tabs = [
@@ -374,6 +375,7 @@ const PekReportWorkspacePage = () => {
       <section className="grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <Info label="Вид отчётности" value={labelPekReportType(item.reportType)} /><Info label="Период" value={`${item.periodStart} — ${item.periodEnd}`} /><Info label="Срок представления" value={item.submissionDueDate || 'Не установлен'} /><Info label="До срока" value={deadlineRemaining(item.submissionDueDate)} /><Info label="Программа" value={program.data ? `${program.data.number} · ${program.data.name}` : 'Загрузка…'} clamp /><Info label="Форма / НПА" value={`${item.templateVersion || '—'} / ${item.regulationVersion || '—'}`} clamp /><Info label="Связано протоколов" value={item.linkedProtocolCount} /><Info label="Последний сбор" value={item.lastCollectedAt ? formatDateTime(item.lastCollectedAt) : 'Сбор ещё не выполнялся'} /><Info label="Сдан" value={formatDateTime(item.submittedAt)} /><Info label="Принят" value={formatDateTime(item.acceptedAt)} /><Info label="Ответственный" value={item.responsibleUser?.name || 'Не назначен'} clamp /><Info label="Результатов" value={sourceSummary.data?.linkedResultCount ?? '—'} />
       </section>
+      <PekReportPackageInputs report={item} />
       <section className="rounded-2xl border bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-black">Фактическая мощность за период</h2><p className="mt-1 text-sm text-slate-500">Эти данные относятся только к текущему отчёту, а не к многолетней программе.</p></div><MuiButton variant="contained" size="small" disabled={updateGeneral.isPending || item.availableActions.edit !== true} onClick={() => updateGeneral.mutate()}>{updateGeneral.isPending ? 'Сохранение…' : 'Сохранить'}</MuiButton></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]"><TextField size="small" label="Фактическая мощность" value={actualCapacity} disabled={item.availableActions.edit !== true} onChange={(event) => setActualCapacity(event.target.value)} /><TextField size="small" label="Единица измерения" placeholder="т/год, м³/сут" value={actualCapacityUnit} disabled={item.availableActions.edit !== true} onChange={(event) => setActualCapacityUnit(event.target.value)} /></div>

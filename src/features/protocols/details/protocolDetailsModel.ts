@@ -2,7 +2,7 @@ import { normalizeProtocolStatus, protocolStatusConfig } from '../../../config/p
 import type { Protocol, ProtocolHistoryItem, ProtocolInternalStatus, ProtocolResult } from '../../../types/protocols';
 import { hasProtocolAction } from '../utils/protocolActions';
 
-export type ProtocolDetailsTab = 'results' | 'main' | 'documents' | 'history';
+export type ProtocolDetailsTab = 'results' | 'main' | 'documents' | 'sampling-acts' | 'history';
 export type ProtocolEditSection = 'general' | 'organization' | 'laboratory' | 'environment' | 'results' | 'methods';
 export type ProtocolPrimaryActionKey = 'edit' | 'calculate' | 'checkNormatives' | 'ready' | 'approve' | 'sign' | 'publish' | 'pdf' | 'replacement' | 'review' | null;
 
