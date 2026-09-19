@@ -979,7 +979,7 @@
         "url": "https://ecoprogress.kz/cases",
         "name": "Подтверждённые экологические кейсы",
         "description": "Опубликованные проекты EcoProgress с проверенными исходными данными, выполненными работами, нормативной базой и результатами.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         }
@@ -1007,7 +1007,824 @@
     "includeInSitemap": true,
     "priority": 0.7,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
+  },
+  {
+    "path": "/reviews",
+    "locale": "ru",
+    "alternates": [],
+    "title": "Отзывы клиентов | ECOPROGRESS",
+    "description": "Проверенные отзывы клиентов EcoProgress об экологических услугах, документах, лабораторных работах и сопровождении.",
+    "h1": "Отзывы клиентов EcoProgress",
+    "canonical": "https://ecoprogress.kz/reviews",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Отзывы клиентов | ECOPROGRESS",
+    "ogDescription": "Проверенные отзывы клиентов EcoProgress об экологических услугах, документах, лабораторных работах и сопровождении.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "мкр Восток, 66",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "hasMap": "https://2gis.kz/shymkent/geo/22659371323797193",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/reviews#webpage",
+        "url": "https://ecoprogress.kz/reviews",
+        "name": "Отзывы клиентов EcoProgress",
+        "description": "Проверенные отзывы клиентов EcoProgress об экологических услугах, документах, лабораторных работах и сопровождении.",
+        "dateModified": "2026-09-19",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/reviews#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Отзывы клиентов EcoProgress",
+            "item": "https://ecoprogress.kz/reviews"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.5,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-09-19"
+  },
+  {
+    "path": "/licenses",
+    "locale": "ru",
+    "alternates": [],
+    "title": "Лицензии и документы | ECOPROGRESS",
+    "description": "Проверяемые лицензии, разрешения, сертификаты и сведения о компетенциях EcoProgress.",
+    "h1": "Лицензии, разрешения и сертификаты",
+    "canonical": "https://ecoprogress.kz/licenses",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Лицензии и документы | ECOPROGRESS",
+    "ogDescription": "Проверяемые лицензии, разрешения, сертификаты и сведения о компетенциях EcoProgress.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "мкр Восток, 66",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "hasMap": "https://2gis.kz/shymkent/geo/22659371323797193",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/licenses#webpage",
+        "url": "https://ecoprogress.kz/licenses",
+        "name": "Лицензии, разрешения и сертификаты",
+        "description": "Проверяемые лицензии, разрешения, сертификаты и сведения о компетенциях EcoProgress.",
+        "dateModified": "2026-09-19",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/licenses#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Лицензии, разрешения и сертификаты",
+            "item": "https://ecoprogress.kz/licenses"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.7,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-09-19"
+  },
+  {
+    "path": "/calculator",
+    "locale": "ru",
+    "alternates": [],
+    "title": "Предварительный расчёт экологических услуг | ECOPROGRESS",
+    "description": "Предварительный подбор состава экологических услуг по задаче, категории объекта и региону.",
+    "h1": "Подберите состав экологических услуг",
+    "canonical": "https://ecoprogress.kz/calculator",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Предварительный расчёт экологических услуг | ECOPROGRESS",
+    "ogDescription": "Предварительный подбор состава экологических услуг по задаче, категории объекта и региону.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "мкр Восток, 66",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "hasMap": "https://2gis.kz/shymkent/geo/22659371323797193",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/calculator#webpage",
+        "url": "https://ecoprogress.kz/calculator",
+        "name": "Подберите состав экологических услуг",
+        "description": "Предварительный подбор состава экологических услуг по задаче, категории объекта и региону.",
+        "dateModified": "2026-09-19",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "@id": "https://ecoprogress.kz/calculator#service",
+        "url": "https://ecoprogress.kz/calculator",
+        "name": "Подберите состав экологических услуг",
+        "description": "Предварительный подбор состава экологических услуг по задаче, категории объекта и региону.",
+        "serviceType": "Подберите состав экологических услуг",
+        "provider": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        },
+        "areaServed": {
+          "@type": "Place",
+          "name": "Казахстан"
+        },
+        "image": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+        "subjectOf": [
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-1"
+          },
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-2"
+          },
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-3"
+          },
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-4"
+          },
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-5"
+          },
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-6"
+          },
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-7"
+          },
+          {
+            "@id": "https://ecoprogress.kz/calculator#expert-8"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-1",
+        "name": "Бақытбай Құралай Нұрланқызы",
+        "url": "https://ecoprogress.kz/experts/bakytbay-kuralay-nurlankyzy",
+        "knowsAbout": [
+          "Подготовка внутренних аудиторов систем менеджмента по ГОСТ ISO/IEC 17025-2019 в соответствии с требованиями СТ РК ISO 19011-2019"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Подготовка внутренних аудиторов систем менеджмента по ГОСТ ISO/IEC 17025-2019 в соответствии с требованиями СТ РК ISO 19011-2019",
+            "credentialCategory": "Удостоверение",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Учебный центр «Эксперт»"
+            },
+            "identifier": "20"
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-2",
+        "name": "Бектибаева Рыскуль Маратовна",
+        "url": "https://ecoprogress.kz/experts/bektibaeva-ryskul-maratovna",
+        "knowsAbout": [
+          "Подготовка внутренних аудиторов систем менеджмента по ГОСТ ISO/IEC 17025-2019 в соответствии с требованиями СТ РК ISO 19011-2019"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Подготовка внутренних аудиторов систем менеджмента по ГОСТ ISO/IEC 17025-2019 в соответствии с требованиями СТ РК ISO 19011-2019",
+            "credentialCategory": "Удостоверение",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Учебный центр «Эксперт»"
+            },
+            "identifier": "011"
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-3",
+        "name": "Дуйсенбай Руслан Серікбайұлы",
+        "url": "https://ecoprogress.kz/experts/duisenbai-ruslan-serikbaiuly",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+          "Новый экологический кодекс Республики Казахстан"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "81"
+          },
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Семинар по разъяснению Нового экологического кодекса РК",
+            "credentialCategory": "Подтверждение участия в семинаре",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Центр распространения знаний АЗЭК / Ассоциация экологических организаций Казахстана"
+            }
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-4",
+        "name": "Манап Ақерке Маратқызы",
+        "url": "https://ecoprogress.kz/experts/manap-akerke-maratkyzy",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "80"
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-5",
+        "name": "Өмірбаева Айгерім Қазыбекқызы",
+        "url": "https://ecoprogress.kz/experts/omirbaeva-aigerim-kazybekkyzy",
+        "knowsAbout": [
+          "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "ГОСТ ISO/IEC 17025-2019. Общие требования к компетентности испытательных и калибровочных лабораторий",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Учебный центр „Эксперт“»"
+            },
+            "identifier": "84"
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-6",
+        "name": "Сейткарым Акерке Ерболовна",
+        "url": "https://ecoprogress.kz/experts/seitkarym-akerke-erbolovna",
+        "knowsAbout": [
+          "Оценка неопределенности измерений по РМГ 43-2001"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Оценка неопределенности измерений в соответствии с требованиями РМГ 43-2001",
+            "credentialCategory": "Сертификат",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "Учебный центр «Эксперт»"
+            },
+            "identifier": "103"
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-7",
+        "name": "Сейткарым Акерке Ерболқызы",
+        "url": "https://ecoprogress.kz/experts/seitkarym-akerke-erbolkyzy",
+        "knowsAbout": [
+          "Пользователь информационной платформы для экологов «Clever»"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Пользователь информационной платформы для экологов «Clever»",
+            "credentialCategory": "Сертификат пользователя",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Центр охраны здоровья и экопроектирования»"
+            },
+            "identifier": "С-20/06-17/006"
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": "https://ecoprogress.kz/calculator#expert-8",
+        "name": "Маханова Камилла Маратовна",
+        "url": "https://ecoprogress.kz/experts/makhanova-kamilla-maratovna",
+        "knowsAbout": [
+          "Пользователь информационной платформы для экологов «Clever»"
+        ],
+        "hasCredential": [
+          {
+            "@type": "EducationalOccupationalCredential",
+            "name": "Пользователь информационной платформы для экологов «Clever»",
+            "credentialCategory": "Сертификат пользователя",
+            "recognizedBy": {
+              "@type": "Organization",
+              "name": "ТОО «Центр охраны здоровья и экопроектирования»"
+            },
+            "identifier": "С-20/06-17/005"
+          }
+        ],
+        "worksFor": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/calculator#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Подберите состав экологических услуг",
+            "item": "https://ecoprogress.kz/calculator"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.7,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-09-19"
+  },
+  {
+    "path": "/checklists",
+    "locale": "ru",
+    "alternates": [],
+    "title": "Экологические чек-листы для предприятий | ECOPROGRESS",
+    "description": "Практические экологические чек-листы для подготовки документов, проверок, ПЭК, лаборатории и работы с отходами.",
+    "h1": "Чек-листы для предприятий",
+    "canonical": "https://ecoprogress.kz/checklists",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Экологические чек-листы для предприятий | ECOPROGRESS",
+    "ogDescription": "Практические экологические чек-листы для подготовки документов, проверок, ПЭК, лаборатории и работы с отходами.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "мкр Восток, 66",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "hasMap": "https://2gis.kz/shymkent/geo/22659371323797193",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/checklists#webpage",
+        "url": "https://ecoprogress.kz/checklists",
+        "name": "Чек-листы для предприятий",
+        "description": "Практические экологические чек-листы для подготовки документов, проверок, ПЭК, лаборатории и работы с отходами.",
+        "dateModified": "2026-09-19",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/checklists#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Чек-листы для предприятий",
+            "item": "https://ecoprogress.kz/checklists"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.6,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-09-19"
+  },
+  {
+    "path": "/industries",
+    "locale": "ru",
+    "alternates": [],
+    "title": "Экологические решения по отраслям | ECOPROGRESS",
+    "description": "Экологические решения EcoProgress для промышленности, строительства, медицины, логистики, торговли и корпоративных объектов.",
+    "h1": "Экологические решения для разных отраслей",
+    "canonical": "https://ecoprogress.kz/industries",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Экологические решения по отраслям | ECOPROGRESS",
+    "ogDescription": "Экологические решения EcoProgress для промышленности, строительства, медицины, логистики, торговли и корпоративных объектов.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "мкр Восток, 66",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "hasMap": "https://2gis.kz/shymkent/geo/22659371323797193",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/industries#webpage",
+        "url": "https://ecoprogress.kz/industries",
+        "name": "Экологические решения для разных отраслей",
+        "description": "Экологические решения EcoProgress для промышленности, строительства, медицины, логистики, торговли и корпоративных объектов.",
+        "dateModified": "2026-09-19",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/industries#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Экологические решения для разных отраслей",
+            "item": "https://ecoprogress.kz/industries"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.7,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-09-19"
+  },
+  {
+    "path": "/deadlines",
+    "locale": "ru",
+    "alternates": [],
+    "title": "Календарь экологических сроков | ECOPROGRESS",
+    "description": "Календарь экологической отчётности и обязательных мероприятий для предприятий Казахстана.",
+    "h1": "Календарь экологической отчётности",
+    "canonical": "https://ecoprogress.kz/deadlines",
+    "robots": "index,follow",
+    "ogType": "website",
+    "ogTitle": "Календарь экологических сроков | ECOPROGRESS",
+    "ogDescription": "Календарь экологической отчётности и обязательных мероприятий для предприятий Казахстана.",
+    "ogImage": "https://ecoprogress.kz/media/social/ecoprogress-og-1200x630.jpg",
+    "ogImageWidth": 1200,
+    "ogImageHeight": 630,
+    "twitterCard": "summary_large_image",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ecoprogress.kz/#organization",
+        "name": "ECOPROGRESS GROUP",
+        "alternateName": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://ecoprogress.kz/favicon.png"
+        },
+        "email": "eco.progresss@gmail.com",
+        "telephone": "+7 778 121 11 58",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "мкр Восток, 66",
+          "addressLocality": "Шымкент",
+          "addressCountry": "KZ"
+        },
+        "hasMap": "https://2gis.kz/shymkent/geo/22659371323797193",
+        "sameAs": [
+          "https://www.instagram.com/ecoprogress.group",
+          "https://www.tiktok.com/@ecoprogress.group"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ecoprogress.kz/#website",
+        "name": "EcoProgress",
+        "url": "https://ecoprogress.kz",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://ecoprogress.kz/#organization",
+          "name": "ECOPROGRESS GROUP"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://ecoprogress.kz/deadlines#webpage",
+        "url": "https://ecoprogress.kz/deadlines",
+        "name": "Календарь экологической отчётности",
+        "description": "Календарь экологической отчётности и обязательных мероприятий для предприятий Казахстана.",
+        "dateModified": "2026-09-19",
+        "isPartOf": {
+          "@id": "https://ecoprogress.kz/#website"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "@id": "https://ecoprogress.kz/deadlines#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": "https://ecoprogress.kz"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Календарь экологической отчётности",
+            "item": "https://ecoprogress.kz/deadlines"
+          }
+        ]
+      }
+    ],
+    "includeInSitemap": true,
+    "priority": 0.6,
+    "changeFrequency": "monthly",
+    "lastModified": "2026-09-19"
   },
   {
     "path": "/experts",
@@ -18793,7 +19610,7 @@
         "url": "https://ecoprogress.kz/kk",
         "name": "Қазақстандағы бизнеске арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық жобалау, ПЭК, зертханалық зерттеулер, қалдықтар құжаттары және рұқсат алу бойынша қызмет көрсетеміз.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -18823,7 +19640,7 @@
     "includeInSitemap": true,
     "priority": 1,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/ekologiyalyq-qyzmetter",
@@ -18901,7 +19718,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-qyzmetter",
         "name": "Кәсіпорындарға арналған экологиялық қызметтер",
         "description": "Кәсіпорындарға экологиялық құжаттар, ПЭК, шығарындылар жобалары, зертханалық өлшеулер және қалдықтар бойынша кешенді қызмет.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19212,7 +20029,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/qaldyqtar-pasporty",
@@ -19290,7 +20107,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtar-pasporty",
         "name": "Қалдықтар паспортын әзірлеу",
         "description": "Кәсіпорындарға қалдықтар паспортын әзірлеу және рәсімдеу. Қажетті деректерді анықтап, жұмыс көлемі мен құнын есептейміз.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19603,7 +20420,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/services/ndv",
@@ -19681,7 +20498,7 @@
         "url": "https://ecoprogress.kz/kk/services/ndv",
         "name": "Рұқсат етілетін шығарындылар нормативтерінің жобасы",
         "description": "Стационарлық көздерді түгендеу, шығарындыларды есептеу және кәсіпорынға рұқсат етілетін шығарындылар нормативтерін әзірлеу.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -19994,7 +20811,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/pek-bagdarlamasy",
@@ -20072,7 +20889,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy",
         "name": "Өндірістік экологиялық бақылау бағдарламасын әзірлеу",
         "description": "Кәсіпорынға ПЭК бағдарламасын әзірлеу: бақылау нысандары, мониторинг нүктелері, көрсеткіштер, әдістер және кезеңділік.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20385,7 +21202,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/pek-esebi",
@@ -20463,7 +21280,7 @@
         "url": "https://ecoprogress.kz/kk/pek-esebi",
         "name": "Өндірістік экологиялық бақылау есебін дайындау",
         "description": "ПЭК бағдарламасы, зертханалық хаттамалар және кезеңнің өндірістік деректері негізінде ресми ПЭК есебін дайындау.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -20776,7 +21593,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/ekologiyalyq-ruqsat",
@@ -20854,7 +21671,7 @@
         "url": "https://ecoprogress.kz/kk/ekologiyalyq-ruqsat",
         "name": "Әсер етуге экологиялық рұқсат алу",
         "description": "Нысан санатын және жобалық негіздерді тексеріп, әсер етуге экологиялық рұқсат алу үшін материалдарды дайындаймыз.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21175,7 +21992,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/sanitariyalyq-qorgau-aimagy",
@@ -21253,7 +22070,7 @@
         "url": "https://ecoprogress.kz/kk/sanitariyalyq-qorgau-aimagy",
         "name": "Санитариялық-қорғау аймағының жобасын әзірлеу",
         "description": "Шығарындылар, шу және нысанның нақты жоспарлануы бойынша санитариялық-қорғау аймағының жобасын әзірлеу.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21566,7 +22383,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/zerthanalyq-zertteuler",
@@ -21644,7 +22461,7 @@
         "url": "https://ecoprogress.kz/kk/zerthanalyq-zertteuler",
         "name": "Экологиялық зертханалық зерттеулер",
         "description": "Ауа, су, топырақ, шу және өндірістік факторлар бойынша зертханалық зерттеулер: бағдарлама, сынама алу және хаттамалар.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -21955,7 +22772,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/su-analizi",
@@ -22033,7 +22850,7 @@
         "url": "https://ecoprogress.kz/kk/su-analizi",
         "name": "Суға зертханалық анализ жасау",
         "description": "Ауыз су, табиғи немесе сарқынды суға зертханалық анализ: көрсеткіштерді таңдау, сынама алу және зерттеу хаттамасы.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22354,7 +23171,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/qaldyqtardy-kadege-zharatu",
@@ -22432,7 +23249,7 @@
         "url": "https://ecoprogress.kz/kk/qaldyqtardy-kadege-zharatu",
         "name": "Қалдықтарды кәдеге жарату",
         "description": "Өндірістік қалдықтарды тексеру, рұқсат етілген операцияны келісу және қабылдау мен кәдеге жаратуды растайтын құжаттар.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -22745,7 +23562,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/kk/pek-bagdarlamasy-shymkent",
@@ -22823,7 +23640,7 @@
         "url": "https://ecoprogress.kz/kk/pek-bagdarlamasy-shymkent",
         "name": "Шымкенттегі ПЭК бағдарламасын әзірлеу",
         "description": "Шымкент кәсіпорындарына ПЭК бағдарламасын әзірлеу: нысандар, мониторинг нүктелері, көрсеткіштер, әдістер және бақылау кестесі.",
-        "dateModified": "2026-09-15",
+        "dateModified": "2026-09-18",
         "isPartOf": {
           "@id": "https://ecoprogress.kz/#website"
         },
@@ -23136,7 +23953,7 @@
     "includeInSitemap": true,
     "priority": 0.9,
     "changeFrequency": "weekly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/news/ekologicheskie-dokumenty-too-kazakhstan",
@@ -25487,7 +26304,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/experts/bektibaeva-ryskul-maratovna",
@@ -25610,7 +26427,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/experts/duisenbai-ruslan-serikbaiuly",
@@ -25743,7 +26560,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/experts/manap-akerke-maratkyzy",
@@ -25866,7 +26683,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/experts/omirbaeva-aigerim-kazybekkyzy",
@@ -25989,7 +26806,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolovna",
@@ -26112,7 +26929,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/experts/seitkarym-akerke-erbolkyzy",
@@ -26235,7 +27052,7 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   },
   {
     "path": "/experts/makhanova-kamilla-maratovna",
@@ -26358,6 +27175,6 @@
     "includeInSitemap": true,
     "priority": 0.6,
     "changeFrequency": "monthly",
-    "lastModified": "2026-09-15"
+    "lastModified": "2026-09-18"
   }
 ]

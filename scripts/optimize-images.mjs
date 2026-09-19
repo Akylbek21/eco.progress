@@ -16,6 +16,12 @@ const sources = {
   'para.jpg': 'ecoprogress-og-cover',
   'ekologicheskoe-soprovozhdenie.jpg': 'ekologicheskoe-soprovozhdenie',
   'media/ecologist-outsourcing-hero.png': 'ecologist-outsourcing-hero',
+  'media/service-roos-card.png': 'service-roos-card',
+  'media/service-pek-card.png': 'service-pek-card',
+  'media/service-permit-card.png': 'service-permit-card',
+  'media/service-laboratory-card.png': 'service-laboratory-card',
+  'media/service-recycling-card.png': 'service-recycling-card',
+  'media/service-support-card.png': 'service-support-card',
   'utilizacija-othodov-3.jpg': 'utilizaciya-othodov',
   'poligon-tbo-2.jpg': 'poligon-tbo',
 };

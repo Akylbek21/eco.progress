@@ -33,6 +33,12 @@ const NewsPage = lazy(publicRouteLoaders.news);
 const NewsDetailsPage = lazy(() => import('./pages/NewsDetailsPage'));
 const CasesPage = lazy(() => import('./pages/CasesPage'));
 const CaseDetailsPage = lazy(() => import('./pages/CaseDetailsPage'));
+const ReviewsPage = lazyNamed(() => import('./pages/ResourcePages'), 'ReviewsPage');
+const LicensesPage = lazyNamed(() => import('./pages/ResourcePages'), 'LicensesPage');
+const CalculatorPage = lazyNamed(() => import('./pages/ResourcePages'), 'CalculatorPage');
+const ChecklistsPage = lazyNamed(() => import('./pages/ResourcePages'), 'ChecklistsPage');
+const IndustriesPage = lazyNamed(() => import('./pages/ResourcePages'), 'IndustriesPage');
+const DeadlinesPage = lazyNamed(() => import('./pages/ResourcePages'), 'DeadlinesPage');
 const LoginPage = lazy(publicRouteLoaders.login);
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
@@ -138,7 +144,7 @@ const ForbiddenPage = ({ message = 'У вашей роли нет прав дл�
   </div>
 );
 
-const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/experts', '/partners', '/news', '/cases', '/faq', '/contacts'];
+const publicPathPrefixes = ['/', '/about', '/services', '/tariffs', '/employees', '/experts', '/partners', '/news', '/cases', '/reviews', '/licenses', '/calculator', '/checklists', '/industries', '/deadlines', '/faq', '/contacts'];
 
 const RouteFallback = () => {
   const { pathname } = useLocation();
@@ -216,6 +222,12 @@ function App() {
         <Route path="/news/:id" element={<PublicLayout><NewsDetailsPage /></PublicLayout>} />
         <Route path="/cases" element={<PublicLayout><CasesPage /></PublicLayout>} />
         <Route path="/cases/:slug" element={<PublicLayout><CaseDetailsPage /></PublicLayout>} />
+        <Route path="/reviews" element={<PublicLayout><ReviewsPage /></PublicLayout>} />
+        <Route path="/licenses" element={<PublicLayout><LicensesPage /></PublicLayout>} />
+        <Route path="/calculator" element={<PublicLayout><CalculatorPage /></PublicLayout>} />
+        <Route path="/checklists" element={<PublicLayout><ChecklistsPage /></PublicLayout>} />
+        <Route path="/industries" element={<PublicLayout><IndustriesPage /></PublicLayout>} />
+        <Route path="/deadlines" element={<PublicLayout><DeadlinesPage /></PublicLayout>} />
         <Route path="/faq" element={<PublicLayout><FaqPage /></PublicLayout>} />
         <Route path="/contacts" element={<PublicLayout><ContactsPage /></PublicLayout>} />
         <Route path="/regions" element={<PublicLayout><RegionsPage /></PublicLayout>} />

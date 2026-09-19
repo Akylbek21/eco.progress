@@ -20,6 +20,12 @@ const NewsPage = lazy(publicRouteLoaders.news);
 const NewsDetailsPage = lazy(() => import('./pages/NewsDetailsPage'));
 const CasesPage = lazy(() => import('./pages/CasesPage'));
 const CaseDetailsPage = lazy(() => import('./pages/CaseDetailsPage'));
+const ReviewsPage = lazy(() => import('./pages/ResourcePages').then((module) => ({ default: module.ReviewsPage })));
+const LicensesPage = lazy(() => import('./pages/ResourcePages').then((module) => ({ default: module.LicensesPage })));
+const CalculatorPage = lazy(() => import('./pages/ResourcePages').then((module) => ({ default: module.CalculatorPage })));
+const ChecklistsPage = lazy(() => import('./pages/ResourcePages').then((module) => ({ default: module.ChecklistsPage })));
+const IndustriesPage = lazy(() => import('./pages/ResourcePages').then((module) => ({ default: module.IndustriesPage })));
+const DeadlinesPage = lazy(() => import('./pages/ResourcePages').then((module) => ({ default: module.DeadlinesPage })));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
 const ContactsPage = lazy(publicRouteLoaders.contacts);
 const RegionsPage = lazy(publicRouteLoaders.regions);
@@ -45,6 +51,12 @@ const PublicRoutes = () => (
             <Route path="/news/:id" element={<PublicRoute><NewsDetailsPage /></PublicRoute>} />
             <Route path="/cases" element={<PublicRoute><CasesPage /></PublicRoute>} />
             <Route path="/cases/:slug" element={<PublicRoute><CaseDetailsPage /></PublicRoute>} />
+            <Route path="/reviews" element={<PublicRoute><ReviewsPage /></PublicRoute>} />
+            <Route path="/licenses" element={<PublicRoute><LicensesPage /></PublicRoute>} />
+            <Route path="/calculator" element={<PublicRoute><CalculatorPage /></PublicRoute>} />
+            <Route path="/checklists" element={<PublicRoute><ChecklistsPage /></PublicRoute>} />
+            <Route path="/industries" element={<PublicRoute><IndustriesPage /></PublicRoute>} />
+            <Route path="/deadlines" element={<PublicRoute><DeadlinesPage /></PublicRoute>} />
             <Route path="/faq" element={<PublicRoute><FaqPage /></PublicRoute>} />
             <Route path="/contacts" element={<PublicRoute><ContactsPage /></PublicRoute>} />
             <Route path="/regions" element={<PublicRoute><RegionsPage /></PublicRoute>} />
@@ -55,7 +67,7 @@ const PublicRoutes = () => (
   </Routes>
 );
 
-const routesWithoutQueries = new Set(['/', '/about', '/partners', '/tariffs', '/faq', '/contacts', '/regions', '/search', '/employees', '/experts']);
+const routesWithoutQueries = new Set(['/', '/about', '/partners', '/tariffs', '/faq', '/contacts', '/regions', '/search', '/employees', '/experts', '/reviews', '/calculator', '/checklists', '/industries', '/deadlines']);
 
 export default function PublicApp() {
   const { pathname } = useLocation();

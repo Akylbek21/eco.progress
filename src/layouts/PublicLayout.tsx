@@ -292,7 +292,7 @@ const PublicLayout = ({ children }: { children: ReactNode }) => {
               <div className="mt-4 space-y-3 text-sm text-white/75">
                 <Link to={isKk ? '/kk' : '/about'} className="block hover:text-white">{isKk ? 'Басты бет' : 'О компании'}</Link>
                 <Link to={isKk ? '/kk/ekologiyalyq-qyzmetter' : '/contacts'} className="block hover:text-white">{isKk ? 'Қызметтер' : 'Контакты'}</Link>
-                {!isKk && <><Link to="/partners" className="block hover:text-white">Партнеры</Link><Link to="/news" className="block hover:text-white">Статьи</Link><Link to="/cases" className="block hover:text-white">Кейсы</Link><Link to="/faq" className="block hover:text-white">FAQ</Link></>}
+                {!isKk && <><Link to="/partners" className="block hover:text-white">Партнеры</Link><Link to="/news" className="block hover:text-white">Статьи</Link><Link to="/cases" className="block hover:text-white">Кейсы</Link><Link to="/industries" className="block hover:text-white">Отрасли</Link><Link to="/checklists" className="block hover:text-white">Чек-листы</Link><Link to="/deadlines" className="block hover:text-white">Календарь</Link><Link to="/licenses" className="block hover:text-white">Документы</Link><Link to="/reviews" className="block hover:text-white">Отзывы</Link><Link to="/faq" className="block hover:text-white">FAQ</Link></>}
               </div>
               <h4 className="mt-7 text-sm font-semibold uppercase text-eco-200">{isKk ? 'Жеке кабинет' : 'Личный кабинет'}</h4>
               <div className="mt-4 space-y-3 text-sm text-white/75">

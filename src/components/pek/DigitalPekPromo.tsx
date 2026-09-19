@@ -30,7 +30,7 @@ export const DigitalPekServiceBanner = ({ placement }: { placement: string }) =>
 );
 
 const DigitalPekPromo = () => (
-  <section aria-labelledby="digital-pek-title" className="overflow-hidden bg-white px-4 py-16 sm:px-8 sm:py-20">
+  <section aria-labelledby="digital-pek-title" className="overflow-hidden bg-white px-4 py-16 sm:px-8">
     <div className="mx-auto max-w-7xl rounded-[30px] bg-eco-900 p-6 text-white shadow-2xl shadow-eco-900/15 sm:p-10 lg:p-12">
       <div className="grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
         <div>
@@ -43,8 +43,13 @@ const DigitalPekPromo = () => (
             <Button asChild variant="secondary" className="w-full sm:w-auto"><Link to="/pek-system" onClick={() => trackEvent('digital_pek_system_click', { placement: 'home_digital_pek' })}>Посмотреть возможности системы <ArrowRight size={17} /></Link></Button>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2" aria-label="Возможности цифрового кабинета">
-          {capabilities.map(([label, Icon]) => <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/12 bg-white/10 p-4"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent"><Icon size={20} /></span><span className="text-sm font-bold text-white/90">{label}</span></div>)}
+        <div className="overflow-hidden rounded-[24px] border border-white/15 bg-white text-eco-900 shadow-2xl shadow-black/20" aria-label="Предпросмотр цифрового кабинета ПЭК">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-eco-500">Кабинет предприятия</p><p className="mt-1 font-bold">Экологический контроль</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Активен</span></div>
+          <div className="p-5">
+            <div className="rounded-2xl bg-eco-50 p-4"><div className="flex items-center justify-between text-sm"><span className="font-semibold">ПЭК за текущий период</span><span className="font-black text-eco-700">75%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full w-3/4 rounded-full bg-accent" /></div><p className="mt-3 text-xs text-slate-500">Следующий срок отображается в календаре</p></div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">{capabilities.slice(0, 4).map(([label, Icon]) => <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-eco-50 text-eco-700"><Icon size={18} /></span><span className="text-xs font-bold text-slate-700">{label}</span></div>)}</div>
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-xs"><span className="font-semibold text-slate-600">Ближайшее мероприятие</span><span className="font-bold text-eco-700">По графику</span></div>
+          </div>
         </div>
       </div>
     </div>
